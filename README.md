@@ -66,7 +66,7 @@ No order book, no counterparty risk. BULL and BEAR pools accumulate independentl
 graph TD
     User["👤 User"]
     FE["Frontend\nReact + wagmi"]
-    Contract["StockPredictionMarket\n0x72DAb8B1..."]
+    Contract["StockPredictionMarketV2\n0x59DF30E2..."]
     Oracle["Chainlink Price Feed\nTSLA/AMZN/PLTR/AMD/NVDA"]
     Owner["👤 Owner/Keeper\n0xed2B5717...\ncreateMarket · lockMarket · settleMarket"]
     Result["Settlement Result\nParimutuel · 2% fee"]
@@ -90,7 +90,14 @@ graph TD
     style TIE fill:#3d1a1a,color:#ff6666
 ```
 
-> *Known issue: TIE defaults to BULL win. Will be fixed to full refund in W5 contract upgrade.
+> *Known limitation, verified against `contracts/StockPredictionMarketV2.sol`: `openPrice` is
+> snapshotted inside `lockMarket()` at execution time (not saved earlier in `createMarket()`), so
+> a Chainlink round that hasn't updated yet between `lockMarket()` and `settleMarket()` can produce
+> `openPrice == closePrice`. `settleMarket()` and `claimWinnings()` both resolve ties with
+> `price >= openPrice`, so BULL wins by default — there is no `REFUND` market state. This is
+> intentional, tested behavior (`test_12_tieSettlement_fullClaimFlow`,
+> `test_19_tieDirectionOnly_noBets_matchesTC09` in `test/StockPredictionMarketV2.t.sol`), carried
+> over unchanged from the original contract, not a pending fix.
 
 ## Deployed Contracts
 
@@ -98,7 +105,8 @@ graph TD
 
 | Contract | Address |
 |----------|---------|
-| StockPredictionMarket | [0x72DAb8B1B53b3CF028e9A0d1E21178981f264245](https://robinhoodchain.blockscout.com/address/0x72DAb8B1B53b3CF028e9A0d1E21178981f264245) |
+| StockPredictionMarketV2 | [0x59DF30E22bdaC70764a5DbF8bBa51BC5a595759C](https://robinhoodchain.blockscout.com/address/0x59DF30E22bdaC70764a5DbF8bBa51BC5a595759C) |
+| StockPredictionMarket | [0x72DAb8B1B53b3CF028e9A0d1E21178981f264245](https://robinhoodchain.blockscout.com/address/0x72DAb8B1B53b3CF028e9A0d1E21178981f264245) — deprecated, no longer referenced by frontend or any new code |
 | TSLA ChainlinkPriceFeed | [0x072A3A0C04Cf8CDcaf5B4A73a4Ed4fF5A841531f](https://robinhoodchain.blockscout.com/address/0x072A3A0C04Cf8CDcaf5B4A73a4Ed4fF5A841531f) |
 | AMZN ChainlinkPriceFeed | [0xcAC5B9d2817325E78090E3Ce4b9C299C819cF953](https://robinhoodchain.blockscout.com/address/0xcAC5B9d2817325E78090E3Ce4b9C299C819cF953) |
 | PLTR ChainlinkPriceFeed | [0xBdC53E50b1167cE1199bFaD54A034f7ab1741051](https://robinhoodchain.blockscout.com/address/0xBdC53E50b1167cE1199bFaD54A034f7ab1741051) |
