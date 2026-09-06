@@ -1,0 +1,41 @@
+{
+  "transactions": [
+    {
+      "hash": null,
+      "transactionType": "CALL",
+      "contractName": null,
+      "contractAddress": "0x59df30e22bdac70764a5dbf8bba51bc5a595759c",
+      "function": "createMarket(address,address,string,uint256)",
+      "functionAbi": "function createMarket(address stockToken, address priceFeed, string symbol, uint256 duration) returns (uint256 marketId)",
+      "arguments": [
+        "0x322F0929c4625eD5bAd873c95208D54E1c003b2d",
+        "0x072A3A0C04Cf8CDcaf5B4A73a4Ed4fF5A841531f",
+        "TSLA",
+        "86400"
+      ],
+      "transaction": {
+        "from": "0xed2b5717c9b936ecc76d75401026a99143e278f5",
+        "to": "0x59df30e22bdac70764a5dbf8bba51bc5a595759c",
+        "gas": "0x3ab60",
+        "value": "0x0",
+        "input": "0xa56774e0000000000000000000000000322f0929c4625ed5bad873c95208d54e1c003b2d000000000000000000000000072a3a0c04cf8cdcaf5b4a73a4ed4ff5a841531f00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000015180000000000000000000000000000000000000000000000000000000000000000454534c4100000000000000000000000000000000000000000000000000000000",
+        "nonce": "0x5d",
+        "chainId": "0x1237"
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    }
+  ],
+  "receipts": [],
+  "libraries": [],
+  "pending": [],
+  "returns": {
+    "marketId": {
+      "internal_type": "uint256",
+      "value": "0"
+    }
+  },
+  "timestamp": 1788666354136,
+  "chain": 4663,
+  "commit": "818500d"
+}

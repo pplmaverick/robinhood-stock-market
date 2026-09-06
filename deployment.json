@@ -36,6 +36,22 @@
     "chainId": 4663,
     "gasUsed": 2772757,
     "effectiveGasPriceWei": "414722000",
-    "deployerAddress": "0xed2B5717c9b936ecC76d75401026A99143e278F5"
+    "deployerAddress": "0xed2B5717c9b936ecC76d75401026A99143e278F5",
+    "markets": [
+      {
+        "marketId": 0,
+        "symbol": "TSLA",
+        "stockToken": "0x322F0929c4625eD5bAd873c95208D54E1c003b2d",
+        "priceFeed": "0x072A3A0C04Cf8CDcaf5B4A73a4Ed4fF5A841531f",
+        "duration": 86400,
+        "openTime": 1788666522,
+        "expiresAt": 1788752922,
+        "txHash": "0xff49f7da0adbc98c63c0cadfd3bcac16c17290fddb0969afeb959fc0e40525d7",
+        "blockNumber": 55668350,
+        "gasUsed": 182390,
+        "effectiveGasPriceWei": "409904000",
+        "note": "Controlled test market opened before the remaining four symbols (AMZN/PLTR/AMD/NVDA), to validate createMarket -> agent bet -> settle -> claim end-to-end."
+      }
+    ]
   }
 }
