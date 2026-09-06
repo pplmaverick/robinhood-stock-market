@@ -134,8 +134,15 @@ export default function MyBets() {
         const bullPool   = mr.bullPool   ?? mr[8]
         const bearPool   = mr.bearPool   ?? mr[9]
         const state      = Number(mr.state ?? mr[10] ?? 0)
-        const direction  = Number(br.direction ?? br[0] ?? 0)
-        const amount     = br.amount  ?? br[1]
+        // viem's decodeFunctionResult() does NOT attach named properties for a function with
+        // multiple plain return values (only single-tuple/struct returns get that) -- confirmed
+        // directly: br.amount/br.direction/br.claimed are always undefined here, so the `??`
+        // "named" branch below is dead code and the index is what actually resolves every time.
+        // V2's bets() outputs are (amount, direction, claimed) -- br[0]/br[1]/br[2] respectively,
+        // the OPPOSITE order from the deprecated contract. Getting this index wrong silently
+        // swaps amount and direction instead of erroring.
+        const direction  = Number(br.direction ?? br[1] ?? 0)
+        const amount     = br.amount  ?? br[0]
         const claimed    = br.claimed ?? br[2]
         if (!amount || amount === 0n) return null
         return {
