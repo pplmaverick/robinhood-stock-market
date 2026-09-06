@@ -1,7 +1,9 @@
-Architectural Directive: Widening the Agent Bet Size from a Fixed Amount to a Range
+# Architectural Directive: Widening the Agent Bet Size from a Fixed Amount to a Range
+
 Decision Date: 2026-09-06
 
-Decision Context (Human Architect)
+## Decision Context (Human Architect)
+
 ADR-10's original deployment parameters set maxAgentBetWei equal to
 MIN_BET, both 0.001 ETH. That equality was carried over from the
 handoff spec without being questioned at the time it was written. Once
@@ -24,7 +26,8 @@ feature working as described. The architect optimized for the
 hackathon framing, since that's the audience and the timeline this
 decision actually has to serve.
 
-Core Directives Given to Claude Code
+## Core Directives Given to Claude Code
+
 Change the maxAgentBetWei value used at deployment from 1000000000000000
 (0.001 ETH) to 5000000000000000 (0.005 ETH). StockPredictionMarketV2.sol
 already accepts maxAgentBetWei as a constructor argument and enforces
@@ -41,7 +44,8 @@ actually signs and broadcasts placeAgentBet() transactions. Widening
 the contract's ceiling does nothing on its own if the agent's decision
 logic keeps sending a fixed 0.001 ETH regardless.
 
-Implementation & Trade-off Constraints
+## Implementation & Trade-off Constraints
+
 maxAgentBetWei is declared immutable, set once in the constructor and
 never adjustable afterward by any function, including by the owner.
 Raising it further later means deploying a new contract version, the
