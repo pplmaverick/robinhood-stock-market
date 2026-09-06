@@ -1,5 +1,10 @@
 {
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  ],
+  "functions": {
+    "api/agent-status.js": {
+      "includeFiles": "../verification/decision/raw_data/price_range_index.json"
+    }
+  }
 }
