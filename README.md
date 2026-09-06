@@ -36,8 +36,10 @@ A parimutuel stock prediction market built on Robinhood Chain Mainnet, using nat
 ### New (this hackathon — Continuity Track)
 
 - [x] World AgentKit integration — trusted-signer relayer (`relayer/`), gates fund-committing
-  agent actions on AgentBook human-verification. Does not yet call `placeBet()`. See
-  [Honest Disclosure](#honest-disclosure-agentkit-relayer) below.
+  agent actions on AgentBook human-verification. `StockPredictionMarketV2.placeAgentBet()`
+  validates and consumes the attestation on-chain; broadcasting that transaction is still a
+  manually-triggered step, and the live agent wallet currently reads `unbacked` on AgentBook.
+  See [Honest Disclosure](#honest-disclosure-agentkit-relayer) below.
 - [x] Graph computation layer — `subgraph/`, `PriceRangeIndex` rolling-window stats, verified
   against a Python reference model on 89 real on-chain events (`verification/graph-computation/`).
 - [x] Decision engine reference model — `decision-engine/`, BULL/BEAR/NO_TRADE over
@@ -71,6 +73,14 @@ graph TD
     Owner["👤 Owner/Keeper\n0xed2B5717...\ncreateMarket · lockMarket · settleMarket"]
     Result["Settlement Result\nParimutuel · 2% fee"]
     TIE["TIE*\nopenPrice == closePrice"]
+    Pool["bullPool / bearPool\nshared: human + agent bets"]
+
+    Subgraph["Subgraph\nPriceRangeIndex\npercentileRank · trend"]
+    DecisionEngine["Decision Engine\nBULL · BEAR · NO_TRADE"]
+    Relayer["Relayer\nverify SIWE signature\nquery AgentBook\nsign attestation"]
+    AgentBook{"AgentBook · World Chain\nbacked · unbacked · unknown"}
+    Reject["No attestation issued\nunbacked or unknown"]
+    AgentWallet["Agent Wallet\nsigns & broadcasts own tx\nno relayer-paid gas"]
 
     User -->|"placeBet()"| FE
     FE --> Contract
@@ -83,11 +93,25 @@ graph TD
     Contract --> TIE
     TIE -->|"BULL default"| Result
     Result -->|"payout"| User
+    Contract --> Pool
+
+    Oracle --> Subgraph
+    Subgraph --> DecisionEngine
+    DecisionEngine -->|"attestation request"| Relayer
+    Relayer --> AgentBook
+    AgentBook -->|"backed"| AgentWallet
+    AgentBook -->|"unbacked/unknown"| Reject
+    AgentWallet -->|"placeAgentBet()"| Contract
 
     style Contract fill:#1a1a2e,color:#00ff88
     style Oracle fill:#375bd2,color:#ffffff
     style Result fill:#2d2d2d,color:#ffcc00
     style TIE fill:#3d1a1a,color:#ff6666
+    style Pool fill:#2d2d2d,color:#ffcc00
+    style DecisionEngine fill:#1a2e2e,color:#66ffcc
+    style Relayer fill:#2e1a3d,color:#cc99ff
+    style AgentBook fill:#3d2e1a,color:#ffcc66
+    style Reject fill:#3d1a1a,color:#ff6666
 ```
 
 > *Known limitation, verified against `contracts/StockPredictionMarketV2.sol`: `openPrice` is
@@ -210,10 +234,27 @@ On most chains, a prediction market would use an arbitrary string or uint to ide
 The `relayer/` service is a **trusted-signer relayer bridge, not a trust-minimized one.** It
 verifies a World AgentKit-signed agent request, checks the agent's wallet against World Chain's
 `AgentBook` for a registered `humanId`, enforces its own replay-nonce, and signs an attestation
-with a relayer-held private key. Nothing about that attestation is verified on-chain by a smart
-contract yet — a party trusting its output is trusting this relayer process, not a cryptographic
-proof a contract independently checks. `placeBet()` does not consume this attestation; that
-integration is explicitly out of scope for this round (see `relayer/README.md`).
+with a relayer-held private key. `StockPredictionMarketV2.placeAgentBet()`
+(`contracts/StockPredictionMarketV2.sol`) does verify and consume that attestation on-chain: it
+`ecrecover`s the signature against `relayerAddress`, checks `expiresAt` and `usedAttestations`,
+and credits the bet into the same `bullPool`/`bearPool` a human's `placeBet()` uses.
+`decision-engine/src/agent-tx.js` builds, simulates, and can broadcast that transaction from the
+agent's own wallet — the agent pays its own gas, the relayer never funds or broadcasts anything
+— but its own code comment is explicit that the broadcast step is never invoked automatically
+and is meant to be wired up only behind an explicit human confirmation. Nothing in this pipeline
+runs unattended end-to-end today.
+
+Separately: the agent wallet this project actually uses currently reads `unbacked` on AgentBook
+(57/57 live reads against real, freshly generated addresses returned `unbacked` — see
+`prompts/08-world-id-orb-availability-constraint.md`), because obtaining a real Orb-verified
+World ID is blocked by an external constraint: Taiwan has no stably operating Orb location, and
+a possible World ID Sandbox workaround was never confirmed compatible with AgentBook's on-chain
+`groupId=1` check. Concretely, this means the relayer currently refuses to sign an attestation
+for this agent at all (`agent_not_human_backed`), so `placeAgentBet()` can never be reached with
+a validly-signed attestation through the real pipeline as it stands — the `backed` branch's
+correctness has been verified by code review and unit tests only (`relayer/src/agent-book.js`,
+exercised in `relayer/test/replay.test.js` and `decision-engine/test/`), not by a live on-chain
+bet.
 
 Separately, and identified after the fact during design: World ID (and therefore AgentBook)
 proves an agent maps to one distinct real human — *uniqueness* — not that the human authorized
