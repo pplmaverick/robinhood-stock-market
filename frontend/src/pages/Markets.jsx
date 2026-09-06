@@ -320,13 +320,13 @@ export default function Markets() {
                   onClick={() => setBetSide('BULL')}
                   className={`group relative flex flex-col items-center justify-center p-8 border-2 rounded-lg transition-all duration-300 ${
                     betSide === 'BULL'
-                      ? 'border-primary bg-primary/10'
-                      : 'border-primary/40 bg-primary/5 hover:bg-primary/10'
+                      ? 'border-bull bg-bull/10'
+                      : 'border-bull/40 bg-bull/5 hover:bg-bull/10'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-primary mb-4 group-hover:scale-110 transition-transform"
+                  <span className="material-symbols-outlined text-bull mb-4 group-hover:scale-110 transition-transform"
                         style={{ fontSize: 48 }}>trending_up</span>
-                  <span className="font-headline-md text-primary mb-2">BULLISH</span>
+                  <span className="font-headline-md text-bull mb-2">BULLISH</span>
                   <div className="flex flex-col items-center">
                     <span className="font-data-lg text-on-surface">
                       {bullRatio != null ? `${bullRatio.toFixed(2)}x` : 'No bets yet'}
@@ -334,7 +334,7 @@ export default function Markets() {
                     <span className="font-label-caps text-on-surface-variant">PAYOUT RATIO</span>
                   </div>
                   <div className="absolute top-2 right-2">
-                    <span className="material-symbols-outlined text-primary opacity-50 group-hover:opacity-100 transition-opacity">
+                    <span className="material-symbols-outlined text-bull opacity-50 group-hover:opacity-100 transition-opacity">
                       add_circle
                     </span>
                   </div>
@@ -345,13 +345,13 @@ export default function Markets() {
                   onClick={() => setBetSide('BEAR')}
                   className={`group relative flex flex-col items-center justify-center p-8 border-2 rounded-lg transition-all duration-300 ${
                     betSide === 'BEAR'
-                      ? 'border-secondary bg-secondary/10'
-                      : 'border-secondary/40 bg-secondary/5 hover:bg-secondary/10'
+                      ? 'border-bear bg-bear/10'
+                      : 'border-bear/40 bg-bear/5 hover:bg-bear/10'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-secondary mb-4 group-hover:scale-110 transition-transform"
+                  <span className="material-symbols-outlined text-bear mb-4 group-hover:scale-110 transition-transform"
                         style={{ fontSize: 48 }}>trending_down</span>
-                  <span className="font-headline-md text-secondary mb-2">BEARISH</span>
+                  <span className="font-headline-md text-bear mb-2">BEARISH</span>
                   <div className="flex flex-col items-center">
                     <span className="font-data-lg text-on-surface">
                       {bearRatio != null ? `${bearRatio.toFixed(2)}x` : 'No bets yet'}
@@ -359,7 +359,7 @@ export default function Markets() {
                     <span className="font-label-caps text-on-surface-variant">PAYOUT RATIO</span>
                   </div>
                   <div className="absolute top-2 right-2">
-                    <span className="material-symbols-outlined text-secondary opacity-50 group-hover:opacity-100 transition-opacity">
+                    <span className="material-symbols-outlined text-bear opacity-50 group-hover:opacity-100 transition-opacity">
                       remove_circle
                     </span>
                   </div>
@@ -383,12 +383,12 @@ export default function Markets() {
                 </div>
                 <div className="flex-1 max-w-xs space-y-2">
                   <div className="flex justify-between font-label-caps text-[10px]">
-                    <span className="text-primary">BULL ({bullPct}%)</span>
-                    <span className="text-secondary">BEAR ({bearPct}%)</span>
+                    <span className="text-bull">BULL ({bullPct}%)</span>
+                    <span className="text-bear">BEAR ({bearPct}%)</span>
                   </div>
                   <div className="w-full h-1.5 bg-surface-container-highest rounded-full overflow-hidden flex">
-                    <div className="h-full bg-primary transition-all" style={{ width: `${bullPct}%` }} />
-                    <div className="h-full bg-secondary transition-all" style={{ width: `${bearPct}%` }} />
+                    <div className="h-full bg-bull transition-all" style={{ width: `${bullPct}%` }} />
+                    <div className="h-full bg-bear transition-all" style={{ width: `${bearPct}%` }} />
                   </div>
                 </div>
               </div>
@@ -420,7 +420,7 @@ export default function Markets() {
                         </span>
                       </div>
                       <div className="flex items-center gap-6">
-                        <span className={`font-data-sm font-bold ${isBull ? 'text-primary' : 'text-secondary'}`}>
+                        <span className={`font-data-sm font-bold ${isBull ? 'text-bull' : 'text-bear'}`}>
                           {isBull ? 'BULL' : 'BEAR'}
                         </span>
                         <span className="font-data-sm text-on-surface">
@@ -450,8 +450,8 @@ export default function Markets() {
                       className={`flex-1 py-2 font-label-caps rounded transition-all ${
                         betSide === side
                           ? side === 'BULL'
-                            ? 'bg-primary text-on-primary-container shadow-sm'
-                            : 'bg-secondary text-on-secondary shadow-sm'
+                            ? 'bg-bull text-on-primary-container shadow-sm'
+                            : 'bg-bear text-on-secondary shadow-sm'
                           : 'text-on-surface-variant hover:text-on-surface'
                       }`}
                     >
@@ -490,8 +490,8 @@ export default function Markets() {
                   </div>
                 </div>
 
-                {/* Payout preview */}
-                <div className="space-y-3 p-4 bg-surface-container-low border border-outline-variant rounded-lg">
+                {/* Payout preview -- border-t divider, not a nested card (DESIGN.md §3.2) */}
+                <div className="space-y-3 pt-4 border-t border-outline-variant">
                   <div className="flex justify-between">
                     <span className="font-label-caps text-on-surface-variant">POTENTIAL PAYOUT</span>
                     <span className="font-data-md text-primary">

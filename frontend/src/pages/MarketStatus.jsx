@@ -21,6 +21,9 @@ function stockByToken(token) {
   return STOCKS.find(s => s.token.toLowerCase() === token?.toLowerCase()) ?? null
 }
 
+// financial tables right-align numeric columns so mono digits line up
+const NUMERIC_COLUMNS = ['Open Price', 'Close Price', 'Bull Pool', 'Bear Pool', 'Total']
+
 export default function MarketStatus() {
   const [showAll, setShowAll] = useState(false)
 
@@ -89,8 +92,8 @@ export default function MarketStatus() {
         {/* Stats row */}
         <div className="flex gap-3">
           {[
-            { label: 'Open',    value: countsByState.open,    color: 'text-[#00d085]' },
-            { label: 'Locked',  value: countsByState.locked,  color: 'text-[#fbbf24]' },
+            { label: 'Open',    value: countsByState.open,    color: 'text-bull' },
+            { label: 'Locked',  value: countsByState.locked,  color: 'text-locked' },
             { label: 'Settled', value: countsByState.settled, color: 'text-on-surface-variant' },
             { label: 'ETH Locked', value: fmtEth(totalEthLocked), color: 'text-primary' },
           ].map(s => (
@@ -126,7 +129,9 @@ export default function MarketStatus() {
                 {['#', 'Stock', 'Symbol', 'Status', 'Open Price', 'Close Price',
                   'Bull Pool', 'Bear Pool', 'Total', 'Settlement'].map(h => (
                   <th key={h}
-                      className="px-4 py-3 font-label-caps text-on-surface-variant uppercase tracking-wider whitespace-nowrap">
+                      className={`px-4 py-3 font-label-caps text-on-surface-variant uppercase tracking-wider whitespace-nowrap ${
+                        NUMERIC_COLUMNS.includes(h) ? 'text-right' : ''
+                      }`}>
                     {h}
                   </th>
                 ))}
@@ -174,19 +179,19 @@ export default function MarketStatus() {
                     <td className="px-4 py-3">
                       <StatusBadge state={m.state} />
                     </td>
-                    <td className="px-4 py-3 font-data-sm text-on-surface">
+                    <td className="px-4 py-3 font-data-sm text-on-surface text-right">
                       {fmtPrice(m.openPrice)}
                     </td>
-                    <td className="px-4 py-3 font-data-sm text-on-surface">
+                    <td className="px-4 py-3 font-data-sm text-on-surface text-right">
                       {m.state === STATE.SETTLED ? fmtPrice(m.closePrice) : '—'}
                     </td>
-                    <td className="px-4 py-3 font-data-sm text-primary">
+                    <td className="px-4 py-3 font-data-sm text-bull text-right">
                       {fmtEth(m.bullPool)}
                     </td>
-                    <td className="px-4 py-3 font-data-sm text-secondary">
+                    <td className="px-4 py-3 font-data-sm text-bear text-right">
                       {fmtEth(m.bearPool)}
                     </td>
-                    <td className="px-4 py-3 font-data-sm text-on-surface">
+                    <td className="px-4 py-3 font-data-sm text-on-surface text-right">
                       {fmtEth(m.bullPool + m.bearPool)}
                     </td>
                     <td className="px-4 py-3 font-data-sm text-on-surface-variant whitespace-nowrap">

@@ -16,6 +16,9 @@ function stockByToken(token) {
   return STOCKS.find(s => s.token.toLowerCase() === token?.toLowerCase()) ?? null
 }
 
+// financial tables right-align numeric columns so mono digits line up
+const NUMERIC_COLUMNS = ['Amount', 'Exp. Payout']
+
 function calcPayout(bet, market) {
   const winPool   = market.state === STATE.SETTLED
     ? (bet.direction === 0 ? market.bullPool : market.bearPool)
@@ -205,7 +208,9 @@ export default function MyBets() {
             <thead>
               <tr className="border-b border-outline-variant bg-surface-container">
                 {['Stock', 'Position', 'Amount', 'Exp. Payout', 'Status', 'Action'].map(h => (
-                  <th key={h} className="px-4 py-3 font-label-caps text-on-surface-variant uppercase tracking-wider">
+                  <th key={h} className={`px-4 py-3 font-label-caps text-on-surface-variant uppercase tracking-wider ${
+                    NUMERIC_COLUMNS.includes(h) ? 'text-right' : ''
+                  }`}>
                     {h}
                   </th>
                 ))}
@@ -247,23 +252,23 @@ export default function MyBets() {
                     </td>
                     {/* Position */}
                     <td className="px-4 py-4 whitespace-nowrap text-center">
-                      <span className={`font-data-md font-bold ${isBull ? 'text-primary' : 'text-secondary'}`}>
+                      <span className={`font-data-md font-bold ${isBull ? 'text-bull' : 'text-bear'}`}>
                         {isBull ? 'BULL' : 'BEAR'}
                       </span>
                     </td>
                     {/* Amount */}
-                    <td className="px-4 py-4 whitespace-nowrap font-data-md text-on-surface">
+                    <td className="px-4 py-4 whitespace-nowrap font-data-md text-on-surface text-right">
                       {fmtEth(r.bet.amount)} ETH
                     </td>
                     {/* Exp Payout */}
-                    <td className="px-4 py-4 whitespace-nowrap font-data-md text-tertiary">
+                    <td className="px-4 py-4 whitespace-nowrap font-data-md text-tertiary text-right">
                       {fmtEth(payout)} ETH
                     </td>
                     {/* Status */}
                     <td className="px-4 py-4 whitespace-nowrap">
                       <StatusBadge state={r.state} />
                       {r.state === STATE.SETTLED && winner === false && (
-                        <span className="ml-2 text-[10px] text-secondary font-label-caps">LOST</span>
+                        <span className="ml-2 text-[10px] text-bear font-label-caps">LOST</span>
                       )}
                     </td>
                     {/* Action */}
