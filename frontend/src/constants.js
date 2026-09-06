@@ -1,4 +1,4 @@
-export const MARKET_ADDRESS = '0x72DAb8B1B53b3CF028e9A0d1E21178981f264245'
+export const MARKET_ADDRESS = '0x59DF30E22bdaC70764a5DbF8bBa51BC5a595759C' // StockPredictionMarketV2
 
 export const STOCKS = [
   {
@@ -38,80 +38,247 @@ export const STOCKS = [
   },
 ]
 
+// Copied verbatim from out/StockPredictionMarketV2.sol/StockPredictionMarketV2.json's "abi"
+// field (forge build output) -- not hand-transcribed. Deliberately NOT reformatted to this
+// file's usual style (unquoted keys, single quotes): reformatting by hand is exactly the kind
+// of manual transcription step that put the old hand-written ABI's bets() tuple in the wrong
+// order in the first place. bets()'s outputs are [amount, direction, claimed] here -- the
+// OPPOSITE order from the deprecated StockPredictionMarket's [direction, amount, claimed].
+// BetPlaced/WinningsClaimed's indexed address argument is also renamed here (bettor, not user).
 export const MARKET_ABI = [
   {
-    name: 'marketCount',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [],
-    outputs: [{ type: 'uint256' }],
-  },
-  {
-    name: 'markets',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: '', type: 'uint256' }],
-    outputs: [
-      { name: 'stockToken',  type: 'address' },
-      { name: 'priceFeed',   type: 'address' },
-      { name: 'symbol',      type: 'string'  },
-      { name: 'roundId',     type: 'uint256' },
-      { name: 'openTime',    type: 'uint256' },
-      { name: 'closeTime',   type: 'uint256' },
-      { name: 'openPrice',   type: 'int256'  },
-      { name: 'closePrice',  type: 'int256'  },
-      { name: 'bullPool',    type: 'uint256' },
-      { name: 'bearPool',    type: 'uint256' },
-      { name: 'state',       type: 'uint8'   },
+    "type": "constructor",
+    "inputs": [
+      { "name": "_relayerAddress", "type": "address", "internalType": "address" },
+      { "name": "_maxAgentBetWei", "type": "uint256", "internalType": "uint256" }
     ],
+    "stateMutability": "nonpayable"
   },
   {
-    name: 'bets',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ type: 'uint256' }, { type: 'address' }],
-    outputs: [
-      { name: 'direction', type: 'uint8'   },
-      { name: 'amount',    type: 'uint256' },
-      { name: 'claimed',   type: 'bool'    },
+    "type": "function",
+    "name": "FEE_BPS",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MIN_BET",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "accumulatedFees",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "bets",
+    "inputs": [
+      { "name": "", "type": "uint256", "internalType": "uint256" },
+      { "name": "", "type": "address", "internalType": "address" }
     ],
-  },
-  {
-    name: 'placeBet',
-    type: 'function',
-    stateMutability: 'payable',
-    inputs: [
-      { name: 'marketId',  type: 'uint256' },
-      { name: 'direction', type: 'uint8'   },
+    "outputs": [
+      { "name": "amount", "type": "uint256", "internalType": "uint256" },
+      { "name": "direction", "type": "uint8", "internalType": "enum StockPredictionMarketV2.Direction" },
+      { "name": "claimed", "type": "bool", "internalType": "bool" }
     ],
-    outputs: [],
+    "stateMutability": "view"
   },
   {
-    name: 'claimWinnings',
-    type: 'function',
-    stateMutability: 'nonpayable',
-    inputs: [{ name: 'marketId', type: 'uint256' }],
-    outputs: [],
+    "type": "function",
+    "name": "claimWinnings",
+    "inputs": [{ "name": "marketId", "type": "uint256", "internalType": "uint256" }],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    name: 'BetPlaced',
-    type: 'event',
-    inputs: [
-      { name: 'marketId',  type: 'uint256', indexed: true  },
-      { name: 'user',      type: 'address', indexed: true  },
-      { name: 'direction', type: 'uint8',   indexed: false },
-      { name: 'amount',    type: 'uint256', indexed: false },
+    "type": "function",
+    "name": "createMarket",
+    "inputs": [
+      { "name": "stockToken", "type": "address", "internalType": "address" },
+      { "name": "priceFeed", "type": "address", "internalType": "address" },
+      { "name": "symbol", "type": "string", "internalType": "string" },
+      { "name": "duration", "type": "uint256", "internalType": "uint256" }
     ],
+    "outputs": [{ "name": "marketId", "type": "uint256", "internalType": "uint256" }],
+    "stateMutability": "nonpayable"
   },
   {
-    name: 'WinningsClaimed',
-    type: 'event',
-    inputs: [
-      { name: 'marketId', type: 'uint256', indexed: true  },
-      { name: 'user',     type: 'address', indexed: true  },
-      { name: 'amount',   type: 'uint256', indexed: false },
-    ],
+    "type": "function",
+    "name": "lockMarket",
+    "inputs": [{ "name": "marketId", "type": "uint256", "internalType": "uint256" }],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
+  {
+    "type": "function",
+    "name": "marketCount",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "markets",
+    "inputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }],
+    "outputs": [
+      { "name": "stockToken", "type": "address", "internalType": "address" },
+      { "name": "priceFeed", "type": "address", "internalType": "address" },
+      { "name": "symbol", "type": "string", "internalType": "string" },
+      { "name": "roundId", "type": "uint256", "internalType": "uint256" },
+      { "name": "openTime", "type": "uint256", "internalType": "uint256" },
+      { "name": "closeTime", "type": "uint256", "internalType": "uint256" },
+      { "name": "openPrice", "type": "int256", "internalType": "int256" },
+      { "name": "closePrice", "type": "int256", "internalType": "int256" },
+      { "name": "bullPool", "type": "uint256", "internalType": "uint256" },
+      { "name": "bearPool", "type": "uint256", "internalType": "uint256" },
+      { "name": "state", "type": "uint8", "internalType": "enum StockPredictionMarketV2.MarketState" }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "maxAgentBetWei",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "owner",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "address", "internalType": "address" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "placeAgentBet",
+    "inputs": [
+      {
+        "name": "a",
+        "type": "tuple",
+        "internalType": "struct StockPredictionMarketV2.Attestation",
+        "components": [
+          { "name": "agentAddress", "type": "address", "internalType": "address" },
+          { "name": "humanId", "type": "uint256", "internalType": "uint256" },
+          { "name": "marketId", "type": "uint256", "internalType": "uint256" },
+          { "name": "direction", "type": "uint8", "internalType": "uint8" },
+          { "name": "amount", "type": "uint256", "internalType": "uint256" },
+          { "name": "robinhoodNonce", "type": "uint256", "internalType": "uint256" },
+          { "name": "issuedAt", "type": "uint256", "internalType": "uint256" },
+          { "name": "expiresAt", "type": "uint256", "internalType": "uint256" }
+        ]
+      },
+      { "name": "v", "type": "uint8", "internalType": "uint8" },
+      { "name": "r", "type": "bytes32", "internalType": "bytes32" },
+      { "name": "s", "type": "bytes32", "internalType": "bytes32" }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "placeBet",
+    "inputs": [
+      { "name": "marketId", "type": "uint256", "internalType": "uint256" },
+      { "name": "direction", "type": "uint8", "internalType": "enum StockPredictionMarketV2.Direction" }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "relayerAddress",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "address", "internalType": "address" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "settleMarket",
+    "inputs": [{ "name": "marketId", "type": "uint256", "internalType": "uint256" }],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "usedAttestations",
+    "inputs": [{ "name": "", "type": "bytes32", "internalType": "bytes32" }],
+    "outputs": [{ "name": "", "type": "bool", "internalType": "bool" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "withdrawFees",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "event",
+    "name": "BetPlaced",
+    "inputs": [
+      { "name": "marketId", "type": "uint256", "indexed": true, "internalType": "uint256" },
+      { "name": "bettor", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "direction", "type": "uint8", "indexed": false, "internalType": "enum StockPredictionMarketV2.Direction" },
+      { "name": "amount", "type": "uint256", "indexed": false, "internalType": "uint256" },
+      { "name": "isAgentBet", "type": "bool", "indexed": false, "internalType": "bool" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "FeesWithdrawn",
+    "inputs": [
+      { "name": "to", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "amount", "type": "uint256", "indexed": false, "internalType": "uint256" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MarketCreated",
+    "inputs": [
+      { "name": "marketId", "type": "uint256", "indexed": true, "internalType": "uint256" },
+      { "name": "symbol", "type": "string", "indexed": false, "internalType": "string" },
+      { "name": "stockToken", "type": "address", "indexed": false, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MarketLocked",
+    "inputs": [
+      { "name": "marketId", "type": "uint256", "indexed": true, "internalType": "uint256" },
+      { "name": "openPrice", "type": "int256", "indexed": false, "internalType": "int256" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MarketSettled",
+    "inputs": [
+      { "name": "marketId", "type": "uint256", "indexed": true, "internalType": "uint256" },
+      { "name": "closePrice", "type": "int256", "indexed": false, "internalType": "int256" },
+      { "name": "winner", "type": "uint8", "indexed": false, "internalType": "enum StockPredictionMarketV2.Direction" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "WinningsClaimed",
+    "inputs": [
+      { "name": "marketId", "type": "uint256", "indexed": true, "internalType": "uint256" },
+      { "name": "bettor", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "amount", "type": "uint256", "indexed": false, "internalType": "uint256" }
+    ],
+    "anonymous": false
+  }
 ]
 
 export const PRICE_FEED_ABI = [

@@ -424,7 +424,8 @@ export default function Markets() {
                   </div>
                 ) : logs.map((log, i) => {
                   const isBull = log.args?.direction === 0
-                  const user   = log.args?.user ?? ''
+                  // V2's BetPlaced event names this arg "bettor" (was "user" on the deprecated contract)
+                  const user   = log.args?.bettor ?? log.args?.user ?? ''
                   return (
                     <div key={i} className="px-6 py-3 flex justify-between items-center hover:bg-surface-variant/10">
                       <div className="flex items-center gap-4">
