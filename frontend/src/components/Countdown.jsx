@@ -26,7 +26,7 @@ export default function Countdown({ closeTime }) {
   }
 
   return (
-    <span className="font-data-md text-tertiary-fixed-dim tabular-nums">
+    <span className="font-data-md text-signal-dim tabular-nums">
       {d > 0 && `${d}d `}{fmt(h)}:{fmt(m)}:{fmt(s)}
     </span>
   )

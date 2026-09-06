@@ -257,65 +257,48 @@ export default function Markets() {
 
       <main className="max-w-container-max mx-auto px-gutter py-8 space-y-8">
 
-        {/* ── Selected Stock Hero Panel ── */}
+        {/* ── Selected Stock Hero Panel (Ticker Frame) ── */}
         <div className="relative overflow-hidden bg-surface-container rounded-lg border border-outline-variant p-6 lg:p-10">
-          <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-8">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <h1 className="font-headline-lg text-headline-lg">{selectedStock.name}</h1>
-                <span className="px-2 py-0.5 bg-surface-container-highest border border-outline-variant font-data-sm rounded text-on-surface-variant">
-                  {selectedStock.symbol}
-                </span>
-              </div>
-              <div className="flex items-baseline gap-4">
-                <span className="font-data-lg text-on-surface" style={{ fontSize: 48 }}>
-                  {currentPrice != null ? fmtPrice(currentPrice) : '—'}
-                </span>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-12">
-              <div className="space-y-1">
-                <span className="font-label-caps text-on-surface-variant">OPEN PRICE</span>
-                <p className="font-data-md text-on-surface">
-                  {activeMarket?.openPrice ? fmtPrice(activeMarket.openPrice) : '—'}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <span className="font-label-caps text-on-surface-variant">SETTLEMENT</span>
-                {activeMarket
-                  ? activeMarket.state === STATE.OPEN
-                    ? <Countdown closeTime={activeMarket.closeTime} />
-                    : <span className="font-data-md text-on-surface-variant">
-                        {new Date(Number(activeMarket.closeTime) * 1000).toLocaleString('en-US', {
-                          month: 'short', day: 'numeric',
-                          hour: '2-digit', minute: '2-digit',
-                        })}
-                      </span>
-                  : <span className="font-data-md text-on-surface-variant">—</span>}
-              </div>
-              <div className="space-y-1 col-span-2 lg:col-span-1">
-                <span className="font-label-caps text-on-surface-variant">STATUS</span>
-                {activeMarket != null
-                  ? <StatusBadge state={activeMarket.state} />
-                  : <span className="font-data-sm text-on-surface-variant">No market</span>}
-              </div>
-            </div>
+          <div className="h-0.5 w-16 bg-signal mb-4" />
+          <div className="flex items-center gap-2">
+            <h1 className="font-headline-lg text-headline-lg">{selectedStock.name}</h1>
+            <span className="px-2 py-0.5 bg-surface-container-highest border border-outline-variant font-data-sm rounded text-on-surface-variant">
+              {selectedStock.symbol}
+            </span>
+          </div>
+          <div className="mt-2">
+            <span className="font-display-num text-display-num text-on-surface">
+              {currentPrice != null ? fmtPrice(currentPrice) : '—'}
+            </span>
           </div>
 
-          {/* sparkline decoration */}
-          <div className="mt-8 h-14 w-full opacity-30 pointer-events-none">
-            <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 1000 100">
-              <path d="M0,80 Q100,60 200,70 T400,40 T600,20 T800,10 T1000,5"
-                    fill="none" stroke="#43ed9f" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-              <path d="M0,80 Q100,60 200,70 T400,40 T600,20 T800,10 T1000,5 L1000,100 L0,100 Z"
-                    fill="url(#grad)" opacity="0.2" />
-              <defs>
-                <linearGradient id="grad" x1="0%" x2="0%" y1="0%" y2="100%">
-                  <stop offset="0%" stopColor="#43ed9f" stopOpacity="1" />
-                  <stop offset="100%" stopColor="#43ed9f" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-            </svg>
+          {/* divided meta ledger row — no nested card, just border-t/border-r dividers */}
+          <div className="mt-6 pt-4 border-t border-outline-variant flex flex-col sm:flex-row gap-4 sm:gap-0">
+            <div className="sm:pr-6 sm:border-r border-outline-variant space-y-1">
+              <span className="font-label-caps text-on-surface-variant">OPEN PRICE</span>
+              <p className="font-data-md text-on-surface">
+                {activeMarket?.openPrice ? fmtPrice(activeMarket.openPrice) : '—'}
+              </p>
+            </div>
+            <div className="sm:px-6 sm:border-r border-outline-variant space-y-1">
+              <span className="font-label-caps text-on-surface-variant">SETTLEMENT</span>
+              {activeMarket
+                ? activeMarket.state === STATE.OPEN
+                  ? <Countdown closeTime={activeMarket.closeTime} />
+                  : <span className="font-data-md text-on-surface-variant">
+                      {new Date(Number(activeMarket.closeTime) * 1000).toLocaleString('en-US', {
+                        month: 'short', day: 'numeric',
+                        hour: '2-digit', minute: '2-digit',
+                      })}
+                    </span>
+                : <span className="font-data-md text-on-surface-variant">—</span>}
+            </div>
+            <div className="sm:pl-6 space-y-1">
+              <span className="font-label-caps text-on-surface-variant">STATUS</span>
+              {activeMarket != null
+                ? <StatusBadge state={activeMarket.state} />
+                : <span className="font-data-sm text-on-surface-variant">No market</span>}
+            </div>
           </div>
         </div>
 

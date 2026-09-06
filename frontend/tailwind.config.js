@@ -5,6 +5,23 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Signal: brand/interactive accent (Connect, focus, active tab, links,
+        // Agent Activity terminal chrome). Never used for BULL/BEAR meaning — see DESIGN.md §1.1.
+        'signal':                     '#38bdf8',
+        'signal-dim':                 '#7dd3fc',
+        'signal-bright':              '#a6e6ff',
+        'signal-deep':                '#0c4a6e',
+        'on-signal':                  '#00263a',
+        // Direction semantics: BULL/BEAR only, never reused as a generic interactive color.
+        'bull':                       '#34d399',
+        'bull-deep':                  '#059669',
+        'bull-tint':                  '#0a2e22',
+        'bear':                       '#fb7185',
+        'bear-deep':                  '#be123c',
+        'bear-tint':                  '#2e0a14',
+        // Market-state semantics, centralized so StatusBadge etc. never hardcode hex.
+        'locked':                     '#fbbf24',
+        'on-surface-faint':           '#5b6280',
         'surface-dim':                '#0f131f',
         'tertiary-fixed-dim':         '#7bd0ff',
         'on-tertiary':                '#00354a',
@@ -77,6 +94,8 @@ export default {
         'label-caps':  ['Inter', 'sans-serif'],
         'headline-lg': ['Inter', 'sans-serif'],
         'data-md':     ['"JetBrains Mono"', 'monospace'],
+        'data-xl':     ['"JetBrains Mono"', 'monospace'],
+        'display-num': ['"JetBrains Mono"', 'monospace'],
       },
       fontSize: {
         'headline-md': ['20px', { lineHeight: '28px', fontWeight: '600' }],
@@ -85,8 +104,16 @@ export default {
         'body-sm':     ['12px', { lineHeight: '16px', fontWeight: '400' }],
         'data-lg':     ['18px', { lineHeight: '24px', fontWeight: '500' }],
         'label-caps':  ['11px', { lineHeight: '16px', letterSpacing: '0.05em', fontWeight: '700' }],
-        'headline-lg': ['24px', { lineHeight: '32px', letterSpacing: '-0.02em', fontWeight: '600' }],
+        'headline-lg': ['28px', { lineHeight: '36px', letterSpacing: '-0.02em', fontWeight: '600' }],
         'data-md':     ['14px', { lineHeight: '20px', fontWeight: '500' }],
+        'data-xl':     ['36px', { lineHeight: '40px', letterSpacing: '-0.01em', fontWeight: '600' }],
+        'display-num': ['56px', { lineHeight: '56px', letterSpacing: '-0.02em', fontWeight: '700' }],
+      },
+      keyframes: {
+        blink: { '0%, 49%': { opacity: 1 }, '50%, 100%': { opacity: 0 } },
+      },
+      animation: {
+        blink: 'blink 1.1s steps(1) infinite',
       },
       maxWidth: {
         'container-max': '1440px',

@@ -102,17 +102,19 @@ function PanelShell({ children, onRefresh, refreshing }) {
   return (
     <div className="bg-surface-container rounded-lg border border-outline-variant p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="font-headline-md text-headline-md">Agent Decision Transparency</h3>
+        <h3 className="font-data-md text-headline-md text-on-surface">agent://decision-transparency</h3>
         <div className="flex items-center gap-3">
-          <span className="font-label-caps text-on-surface-variant uppercase tracking-widest text-xs">
-            Live · TSLA
+          <span className="font-data-sm text-on-surface-variant uppercase tracking-widest text-xs inline-flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-signal animate-pulse" />
+            live · TSLA
+            <span className="inline-block w-2 h-3.5 bg-signal-bright ml-0.5 animate-blink motion-reduce:animate-none" />
           </span>
           <button
             onClick={onRefresh}
             disabled={refreshing}
-            className="font-label-caps text-xs uppercase tracking-widest px-3 py-1 rounded border border-outline-variant text-on-surface-variant hover:text-primary hover:border-primary transition-colors disabled:opacity-50"
+            className="font-data-sm text-xs uppercase tracking-widest px-3 py-1 rounded border border-outline-variant text-on-surface-variant hover:text-signal hover:border-signal transition-colors disabled:opacity-50"
           >
-            {refreshing ? 'Refreshing…' : 'Refresh'}
+            {refreshing ? 'refreshing…' : 'refresh'}
           </button>
         </div>
       </div>
@@ -136,7 +138,7 @@ function StepBlock({ visible, children }) {
 function LoadingNote() {
   return (
     <div className="flex items-center gap-3 py-6">
-      <div className="w-2 h-2 rounded-full bg-tertiary animate-pulse" />
+      <div className="w-2 h-2 rounded-full bg-signal animate-pulse" />
       <span className="font-body-sm text-on-surface-variant">Querying live decision-engine state…</span>
     </div>
   )
@@ -153,7 +155,7 @@ function ErrorNote({ message }) {
 function Step1({ decision, marketId }) {
   return (
     <div>
-      <StepHeader n={1} title="Decision Snapshot" />
+      <StepHeader n={1} title="decision_snapshot" />
       {decision.status === 'query_failed' && (
         <Note tone="warn">
           Live subgraph query failed ({decision.reason}): {decision.error}
@@ -165,10 +167,10 @@ function Step1({ decision, marketId }) {
       {decision.status === 'ok' && (
         <div className="space-y-3">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Metric label="Current Price" value={`$${decision.current.currentPrice.toFixed(2)}`} />
-            <Metric label="Moving Avg" value={`$${decision.current.movingAverage.toFixed(2)}`} />
-            <Metric label="Percentile Rank" value={`${decision.current.percentileRank.toFixed(1)}%`} />
-            <Metric label="Trend" value={decision.betDecision.inputB.trend} />
+            <Metric label="current_price" value={`$${decision.current.currentPrice.toFixed(2)}`} />
+            <Metric label="moving_avg" value={`$${decision.current.movingAverage.toFixed(2)}`} />
+            <Metric label="percentile_rank" value={`${decision.current.percentileRank.toFixed(1)}%`} />
+            <Metric label="trend" value={decision.betDecision.inputB.trend} />
           </div>
           <DecisionBadge decision={decision.betDecision.decision} />
           {decision.betDecision.decision === 'NO_TRADE' && (
@@ -184,13 +186,18 @@ function Step1({ decision, marketId }) {
 }
 
 function Step2({ betDecision }) {
+  const dirGlyph = betDecision.decision === 'BULL' ? '▲ ' : betDecision.decision === 'BEAR' ? '▼ ' : ''
+  const dirColor = betDecision.decision === 'BULL' ? 'text-bull' : betDecision.decision === 'BEAR' ? 'text-bear' : 'text-on-surface'
   return (
     <div className="pt-4 border-t border-outline-variant">
-      <StepHeader n={2} title="Bet Sizing" />
+      <StepHeader n={2} title="bet_sizing" />
       <div className="flex items-center gap-6">
-        <Metric label="Direction" value={betDecision.decision} />
-        <Metric label="Confidence" value={`${(betDecision.confidence * 100).toFixed(0)}%`} />
-        <Metric label="Amount" value={fmtEth(betDecision.betAmountWei)} />
+        <div>
+          <div className="font-label-caps text-on-surface-variant uppercase tracking-widest text-xs">direction</div>
+          <div className={`font-data-md ${dirColor}`}>{dirGlyph}{betDecision.decision}</div>
+        </div>
+        <Metric label="confidence" value={`${(betDecision.confidence * 100).toFixed(0)}%`} />
+        <Metric label="amount" value={fmtEth(betDecision.betAmountWei)} />
       </div>
       <p className="font-body-sm text-on-surface-variant mt-2">
         Linearly scaled between 0.001–0.005 ETH by confidence, per ADR-11.
@@ -202,10 +209,10 @@ function Step2({ betDecision }) {
 function Step3({ agentBook, agentAddress, betDecision, marketId }) {
   return (
     <div className="pt-4 border-t border-outline-variant">
-      <StepHeader n={3} title="AgentBook Verification" />
+      <StepHeader n={3} title="agentbook_verification" />
       {agentBook.status === 'backed' && (
         <Note tone="success">
-          ✓ AgentBook confirms this agent (humanId {agentBook.humanId}) is human-backed. Signing
+          AgentBook confirms this agent (humanId {agentBook.humanId}) is human-backed. Signing
           the attestation and broadcasting placeAgentBet() for a {betDecision.decision} bet of{' '}
           {fmtEth(betDecision.betAmountWei)} on market #{marketId} is decision-engine's next step
           -- that autonomous execution runs server-side (see decision-engine/scripts/run-demo.mjs),
@@ -233,10 +240,8 @@ function Step3({ agentBook, agentAddress, betDecision, marketId }) {
 function StepHeader({ n, title }) {
   return (
     <div className="flex items-center gap-2 mb-3">
-      <span className="w-6 h-6 rounded-full bg-surface-container-high border border-outline-variant flex items-center justify-center font-data-sm text-on-surface-variant">
-        {n}
-      </span>
-      <h4 className="font-label-caps uppercase tracking-widest text-on-surface-variant">{title}</h4>
+      <span className="font-data-sm text-signal">{`[0${n}]`}</span>
+      <h4 className="font-data-sm uppercase tracking-widest text-on-surface-variant">{title}</h4>
     </div>
   )
 }
@@ -253,20 +258,31 @@ function Metric({ label, value }) {
 function DecisionBadge({ decision }) {
   const cls =
     decision === 'BULL'
-      ? 'bg-primary/15 text-primary border-primary/30'
+      ? 'bg-bull-tint text-bull border-bull-deep'
       : decision === 'BEAR'
-        ? 'bg-secondary/15 text-secondary border-secondary/30'
+        ? 'bg-bear-tint text-bear border-bear-deep'
         : 'bg-surface-variant text-on-surface-variant border-outline-variant'
-  return <span className={`inline-flex px-3 py-1 rounded font-label-caps border ${cls}`}>{decision}</span>
+  const glyph = decision === 'BULL' ? '▲' : decision === 'BEAR' ? '▼' : null
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded font-label-caps border ${cls}`}>
+      {glyph && <span aria-hidden="true">{glyph}</span>}
+      {decision}
+    </span>
+  )
 }
 
 function Note({ tone, children }) {
   const cls =
     {
-      success: 'bg-primary/10 border-primary/30 text-primary',
-      info: 'bg-tertiary/10 border-tertiary/30 text-tertiary',
-      warn: 'bg-[#fbbf24]/10 border-[#fbbf24]/30 text-[#fbbf24]',
+      success: 'bg-bull/10 border-bull/30 text-bull',
+      info: 'bg-signal/10 border-signal/30 text-signal-dim',
+      warn: 'bg-locked/10 border-locked/30 text-locked',
       neutral: 'bg-surface-variant/40 border-outline-variant text-on-surface-variant',
     }[tone] ?? 'bg-surface-variant/40 border-outline-variant text-on-surface-variant'
-  return <div className={`rounded-lg border p-4 font-body-sm ${cls}`}>{children}</div>
+  return (
+    <div className={`rounded-lg border p-4 font-data-sm ${cls}`}>
+      <span className="text-signal mr-2" aria-hidden="true">&gt;</span>
+      {children}
+    </div>
+  )
 }

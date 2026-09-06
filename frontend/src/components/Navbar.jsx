@@ -42,42 +42,52 @@ export default function Navbar() {
     }
   }
 
-  const navCls = ({ isActive }) =>
-    isActive
-      ? 'text-tertiary-fixed-dim font-bold font-label-caps uppercase tracking-widest transition-colors'
-      : 'text-on-surface-variant font-label-caps hover:text-primary transition-colors uppercase tracking-widest'
+  const TABS = [
+    { to: '/',              label: 'Markets' },
+    { to: '/my-bets',       label: 'My Bets' },
+    { to: '/market-status', label: 'Market Status' },
+    { to: '/agent-activity', label: 'Agent Activity' },
+  ]
 
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-outline-variant bg-surface-container-low">
-        <div className="flex justify-between items-center w-full px-gutter max-w-container-max mx-auto h-16">
+        <div className="flex items-center w-full px-gutter max-w-container-max mx-auto h-16">
           {/* Logo */}
           <div className="font-headline-md text-headline-md font-semibold text-on-surface flex items-center gap-1">
             Robinhood Stock Prediction Market
-            <span className="w-1.5 h-1.5 bg-primary rounded-full inline-block" />
+            <span className="w-1.5 h-1.5 bg-signal rounded-full inline-block" />
           </div>
 
-          {/* Nav */}
-          <nav className="hidden md:flex items-center gap-8">
-            <NavLink to="/"              className={navCls}>Markets</NavLink>
-            <NavLink to="/my-bets"       className={navCls}>My Bets</NavLink>
-            <NavLink to="/market-status" className={navCls}>Market Status</NavLink>
-            <NavLink to="/agent-activity" className={navCls}>Agent Activity</NavLink>
+          {/* Nav — grouped with the logo, underline marks the active tab */}
+          <nav className="hidden md:flex items-stretch h-16 gap-8 ml-10">
+            {TABS.map(tab => (
+              <NavLink key={tab.to} to={tab.to} className="relative flex items-center font-label-caps uppercase tracking-widest">
+                {({ isActive }) => (
+                  <>
+                    <span className={isActive ? 'text-on-surface font-bold' : 'text-on-surface-variant hover:text-signal-dim transition-colors'}>
+                      {tab.label}
+                    </span>
+                    {isActive && <span className="absolute inset-x-0 bottom-0 h-0.5 bg-signal" />}
+                  </>
+                )}
+              </NavLink>
+            ))}
           </nav>
 
           {/* Wallet */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 ml-auto">
             {isConnected && address && !isWrongNetwork && (
               <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-surface-container border border-outline-variant rounded-lg">
                 <span className="font-data-sm text-on-surface-variant">
                   {address.slice(0, 6)}…{address.slice(-4)}
                 </span>
                 {bal && (
-                  <span className="font-data-sm text-primary">
+                  <span className="font-data-sm text-bull">
                     {Number(bal.formatted).toFixed(4)} ETH
                   </span>
                 )}
-                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                <div className="w-2 h-2 rounded-full bg-bull animate-pulse" />
               </div>
             )}
 
@@ -92,14 +102,14 @@ export default function Navbar() {
             ) : isConnected ? (
               <button
                 onClick={() => disconnect()}
-                className="bg-surface-container-high text-on-surface font-label-caps px-4 py-2 rounded-lg border border-outline-variant hover:border-secondary transition-all"
+                className="bg-surface-container-high text-on-surface font-label-caps px-4 py-2 rounded-lg border border-outline-variant hover:border-signal transition-all"
               >
                 Disconnect
               </button>
             ) : (
               <button
                 onClick={() => connect({ connector: injected() })}
-                className="bg-primary text-on-primary-container font-label-caps px-4 py-2 rounded-lg hover:brightness-110 active:scale-95 transition-all"
+                className="bg-signal text-on-signal font-label-caps px-4 py-2 rounded-lg hover:brightness-110 active:scale-95 transition-all"
               >
                 Connect
               </button>
