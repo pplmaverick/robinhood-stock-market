@@ -13,8 +13,16 @@
 // here is intentionally NOT flipped into the opposite decision (that would be the
 // mean-reversion reading this engine explicitly did not choose) -- it is treated as an
 // unclear/contradictory signal, per the task's own framing ("訊號矛盾或不明確時選 NO_TRADE").
-import { PERCENTILE_HIGH_THRESHOLD, PERCENTILE_LOW_THRESHOLD, MAX_BET_SIZE_WEI } from './config.js'
+import { PERCENTILE_HIGH_THRESHOLD, PERCENTILE_LOW_THRESHOLD } from './config.js'
+import { computeAgentBetAmountWei } from './bet-sizing.js'
 
+// Historical-batch-only placeholder: used when this pure function runs over the frozen fixture
+// (run_typescript.mjs's reference-model comparison, and this file's own unit tests), where there
+// is no RPC to call. The live path (decision-engine/scripts/run-demo.mjs) does NOT trust this
+// value -- it calls market-lookup.js's findOpenMarketId() against the real chain instead and
+// overrides whatever marketId ends up here, since a hardcoded id could silently point at a
+// stale/settled market. Kept for the pure/offline callers only; do not extend this map as new
+// markets open on-chain.
 const SYMBOL_MARKET_ID = { TSLA: 0n, AMZN: 1n, PLTR: 2n, AMD: 3n, NVDA: 4n }
 
 function classifyLevel(percentileRank) {
@@ -84,7 +92,7 @@ function makeBetDecision({ current, previous }) {
 
   if (decision !== 'NO_TRADE') {
     result.marketId = SYMBOL_MARKET_ID[current.symbol] ?? null // demo placeholder -- no live open-market lookup; see decision-engine/README.md
-    result.betAmountWei = MAX_BET_SIZE_WEI.toString()
+    result.betAmountWei = computeAgentBetAmountWei(confidence).toString() // ADR-11: 0.001-0.005 ETH range, scaled by confidence
   }
 
   return result

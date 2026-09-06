@@ -3,13 +3,15 @@
 // here, not scattered as magic numbers through query-decision.js / bet-decision.js.
 
 // --- Risk control (Step 2) ---
-// Hard cap on any single bet this engine will ever propose. Pinned to the deployed contract's
-// OWN documented minimum bet (see root README's "Fees & Security": "Minimum bet enforced
-// (0.001 ETH)") rather than an invented figure -- this is the smallest amount the contract
-// would accept at all, so it's unambiguously demo-scale by construction, not by guesswork at
-// an ETH/USD conversion. Override via env for a different demo-scale value; never raise this
-// to anything resembling a real position size without deliberate re-review.
-const MAX_BET_SIZE_WEI = BigInt(process.env.MAX_BET_SIZE_WEI ?? '1000000000000000') // 0.001 ETH
+// Ceiling and floor of the agent's bet-size range, per ADR-11 (prompts/11-widen-agent-bet-range.md):
+// StockPredictionMarketV2's deployed maxAgentBetWei is 0.005 ETH and its immutable MIN_BET is
+// 0.001 ETH -- these two constants mirror those exact on-chain values so the agent has an
+// actual range to choose within (bet-sizing.js maps confidence linearly between them) instead
+// of a single hardcoded amount. Override via env for a different demo-scale value; never raise
+// MAX_BET_SIZE_WEI above the deployed contract's actual maxAgentBetWei, since placeAgentBet()
+// would simply revert ("exceeds agent max bet size") on anything larger.
+const MAX_BET_SIZE_WEI = BigInt(process.env.MAX_BET_SIZE_WEI ?? '5000000000000000') // 0.005 ETH
+const MIN_BET_SIZE_WEI = BigInt(process.env.MIN_BET_SIZE_WEI ?? '1000000000000000') // 0.001 ETH
 
 // --- Bet decision (Step 2) ---
 // percentileRank >= this = "near the top of its recent window"; <= (100 - this) = "near the
@@ -32,6 +34,7 @@ const QUERY_THROTTLE_MS = Number(process.env.QUERY_THROTTLE_MS ?? 5 * 60 * 1000)
 
 export {
   MAX_BET_SIZE_WEI,
+  MIN_BET_SIZE_WEI,
   PERCENTILE_HIGH_THRESHOLD,
   PERCENTILE_LOW_THRESHOLD,
   VOLATILITY_ANOMALY_RATIO,
