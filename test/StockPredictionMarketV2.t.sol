@@ -93,6 +93,13 @@ contract StockPredictionMarketV2Test is Test {
         market.claimWinnings(marketId);
     }
 
+    function _claimAndReturn(address who, uint256 marketId) internal returns (uint256 payout) {
+        uint256 before = who.balance;
+        vm.prank(who);
+        market.claimWinnings(marketId);
+        payout = who.balance - before;
+    }
+
     /// @dev fee = totalPool * FEE_BPS / 10000, read from the deployed contract's
     /// own FEE_BPS constant -- matches claimWinnings()'s own formula, computed
     /// independently here rather than hardcoded.
@@ -506,5 +513,182 @@ contract StockPredictionMarketV2Test is Test {
         // Sanity: settle should now proceed normally from the correct state.
         feed.setPrice(105);
         market.settleMarket(marketId);
+    }
+
+    // -------------------------------------------------------------------
+    // Phase 5 follow-up 1: exact expiry boundary -- now == expiresAt must
+    // still succeed, matching require(block.timestamp <= a.expiresAt).
+    // -------------------------------------------------------------------
+
+    function test_16_attestationExpiry_exactBoundarySucceeds() public {
+        uint256 minBet = market.MIN_BET();
+        // closeTime is set well past expiresAt so the market's own
+        // betting-window check can't interfere with isolating this boundary.
+        (uint256 marketId,) = _newMarket(10 days, 100);
+        address agent = makeAddr("agent16");
+
+        uint256 expiresAt = block.timestamp + 1 days;
+        StockPredictionMarketV2.Attestation memory a =
+            _mkAttestation(agent, marketId, 0, minBet, 1, block.timestamp, expiresAt);
+        (uint8 v, bytes32 r, bytes32 s) = _sign(RELAYER_PK, _hash(a));
+
+        vm.warp(expiresAt); // now == expiresAt exactly
+
+        market.placeAgentBet{value: minBet}(a, v, r, s); // must succeed, not revert
+    }
+
+    // -------------------------------------------------------------------
+    // Phase 5 follow-up 2: msg.value mismatch against the attestation's
+    // recorded amount -- previously untested by any scenario.
+    // -------------------------------------------------------------------
+
+    function test_17_agentBet_valueMismatchReverts() public {
+        uint256 minBet = market.MIN_BET();
+        (uint256 marketId,) = _newMarket(1 days, 100);
+        address agent = makeAddr("agent17");
+
+        StockPredictionMarketV2.Attestation memory a =
+            _mkAttestation(agent, marketId, 0, minBet, 1, block.timestamp, block.timestamp + 1 days);
+        (uint8 v, bytes32 r, bytes32 s) = _sign(RELAYER_PK, _hash(a));
+
+        uint256 wrongValue = minBet + 1; // deliberately does not match a.amount
+        vm.deal(address(this), wrongValue);
+        vm.expectRevert(bytes("value mismatch"));
+        market.placeAgentBet{value: wrongValue}(a, v, r, s);
+    }
+
+    // -------------------------------------------------------------------
+    // Phase 5 follow-up 3: sole-side bettor with no counterpart, matching
+    // Python TC11's exact shape (total_pool == 1x MIN_BET, no BEAR side).
+    // -------------------------------------------------------------------
+
+    function test_18_withdrawFees_soleSideBettor_matchesTC11() public {
+        uint256 minBet = market.MIN_BET();
+        (uint256 marketId, MockPriceFeed feed) = _newMarket(1 days, 100);
+
+        address bullBettor = makeAddr("bullBettor18");
+        _placeBet(bullBettor, marketId, StockPredictionMarketV2.Direction.BULL, minBet);
+        // Deliberately no BEAR counterpart -- matches Python TC11's sole-bettor shape.
+
+        vm.warp(block.timestamp + 1 days + 1);
+        market.lockMarket(marketId);
+        feed.setPrice(110);
+        market.settleMarket(marketId);
+
+        _claim(bullBettor, marketId);
+
+        // total_pool == minBet alone (no counterpart) -- same shape as
+        // verification/reference_model/trace.json's TC11_withdraw_success.
+        uint256 totalPool = minBet;
+        uint256 expectedFee = _fee(totalPool);
+        assertEq(expectedFee, 20_000_000_000_000, "fee does not match trace.json TC11's recorded value");
+        assertEq(market.accumulatedFees(), expectedFee, "accumulatedFees before withdraw mismatch");
+
+        uint256 ownerBalBefore = address(this).balance;
+        market.withdrawFees();
+        assertEq(address(this).balance - ownerBalBefore, expectedFee, "withdrawn amount mismatch");
+        assertEq(market.accumulatedFees(), 0);
+    }
+
+    // -------------------------------------------------------------------
+    // Phase 5 follow-up 4a: direction determination with an empty pool (no
+    // bets at all), matching Python TC09's shape. Observed via the
+    // MarketSettled event, since the contract never stores "winner" itself.
+    // -------------------------------------------------------------------
+
+    function test_19_tieDirectionOnly_noBets_matchesTC09() public {
+        (uint256 marketId, MockPriceFeed feed) = _newMarket(1 days, 100);
+        // Deliberately no bets placed at all.
+
+        vm.warp(block.timestamp + 1 days + 1);
+        market.lockMarket(marketId); // openPrice = 100
+        feed.setPrice(100); // settle price == lock price -> tie -> BULL should win
+
+        vm.expectEmit(true, false, false, true, address(market));
+        emit StockPredictionMarketV2.MarketSettled(marketId, 100, StockPredictionMarketV2.Direction.BULL);
+        market.settleMarket(marketId);
+    }
+
+    // -------------------------------------------------------------------
+    // Phase 5 follow-up 4b: sequential accumulatedFees growth across two
+    // claims, matching Python TC10's two recorded checkpoints exactly.
+    // -------------------------------------------------------------------
+
+    function test_20_feeAccumulation_sequentialClaims_matchesTC10() public {
+        uint256 minBet = market.MIN_BET();
+        (uint256 marketId, MockPriceFeed feed) = _newMarket(1 days, 100);
+
+        address bullA = makeAddr("bullA20");
+        address bullB = makeAddr("bullB20");
+        address bear = makeAddr("bear20");
+
+        _placeBet(bullA, marketId, StockPredictionMarketV2.Direction.BULL, minBet);
+        _placeBet(bullB, marketId, StockPredictionMarketV2.Direction.BULL, minBet);
+        _placeBet(bear, marketId, StockPredictionMarketV2.Direction.BEAR, minBet);
+
+        vm.warp(block.timestamp + 1 days + 1);
+        market.lockMarket(marketId);
+        feed.setPrice(110);
+        market.settleMarket(marketId);
+
+        assertEq(market.accumulatedFees(), 0);
+
+        _claim(bullA, marketId);
+        assertEq(market.accumulatedFees(), 30_000_000_000_000, "accumulatedFees after first claim mismatch vs trace.json TC10");
+
+        _claim(bullB, marketId);
+        assertEq(market.accumulatedFees(), 60_000_000_000_000, "accumulatedFees after second claim mismatch vs trace.json TC10");
+    }
+
+    // -------------------------------------------------------------------
+    // Phase 5 follow-up 4c: multi-bettor, mixed-amount payout consistency,
+    // matching Python TC14's exact bet amounts and resulting numbers.
+    // -------------------------------------------------------------------
+
+    function test_21_multiBettorPayoutConsistency_matchesTC14() public {
+        uint256 minBet = market.MIN_BET();
+        (uint256 marketId, MockPriceFeed feed) = _newMarket(1 days, 100);
+
+        address bull1 = makeAddr("bull21_1");
+        address bull2 = makeAddr("bull21_2");
+        address bull3 = makeAddr("bull21_3");
+        address bear1 = makeAddr("bear21_1");
+        address bear2 = makeAddr("bear21_2");
+
+        _placeBet(bull1, marketId, StockPredictionMarketV2.Direction.BULL, 1 * minBet);
+        _placeBet(bull2, marketId, StockPredictionMarketV2.Direction.BULL, 2 * minBet);
+        _placeBet(bull3, marketId, StockPredictionMarketV2.Direction.BULL, 3 * minBet);
+        _placeBet(bear1, marketId, StockPredictionMarketV2.Direction.BEAR, 2 * minBet);
+        _placeBet(bear2, marketId, StockPredictionMarketV2.Direction.BEAR, 3 * minBet);
+
+        vm.warp(block.timestamp + 1 days + 1);
+        market.lockMarket(marketId);
+        feed.setPrice(110);
+        market.settleMarket(marketId);
+
+        uint256 totalPool = 11 * minBet;
+        (,,,,,,,, uint256 bullPool, uint256 bearPool,) = market.markets(marketId);
+        assertEq(bullPool + bearPool, totalPool, "total pool shape mismatch vs Python TC14");
+
+        uint256 totalPaidOut = 0;
+        totalPaidOut += _claimAndReturn(bull1, marketId);
+        totalPaidOut += _claimAndReturn(bull2, marketId);
+        totalPaidOut += _claimAndReturn(bull3, marketId);
+
+        vm.prank(bear1);
+        vm.expectRevert(bytes("Lost"));
+        market.claimWinnings(marketId);
+        vm.prank(bear2);
+        vm.expectRevert(bytes("Lost"));
+        market.claimWinnings(marketId);
+
+        uint256 accumulatedFees = market.accumulatedFees();
+
+        // Exact parity with verification/reference_model/trace.json's TC14
+        // result (same formula, same input amounts, deterministic integer math).
+        assertEq(totalPaidOut, 10_779_999_999_999_999, "total_paid_out mismatch vs trace.json TC14");
+        assertEq(accumulatedFees, 219_999_999_999_999, "accumulated_fees mismatch vs trace.json TC14");
+        uint256 dust = totalPool - totalPaidOut - accumulatedFees;
+        assertEq(dust, 2, "rounding dust mismatch vs trace.json TC14");
     }
 }
