@@ -62,6 +62,7 @@ export default function Navbar() {
             <NavLink to="/"              className={navCls}>Markets</NavLink>
             <NavLink to="/my-bets"       className={navCls}>My Bets</NavLink>
             <NavLink to="/market-status" className={navCls}>Market Status</NavLink>
+            <NavLink to="/agent-activity" className={navCls}>Agent Activity</NavLink>
           </nav>
 
           {/* Wallet */}

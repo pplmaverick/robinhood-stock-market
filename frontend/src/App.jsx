@@ -4,6 +4,7 @@ import Navbar from './components/Navbar'
 import Markets from './pages/Markets'
 import MyBets from './pages/MyBets'
 import MarketStatus from './pages/MarketStatus'
+import AgentActivity from './pages/AgentActivity'
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="/"              element={<Markets />} />
           <Route path="/my-bets"       element={<MyBets />} />
           <Route path="/market-status" element={<MarketStatus />} />
+          <Route path="/agent-activity" element={<AgentActivity />} />
         </Routes>
         <footer className="mt-auto py-8 px-gutter border-t border-outline-variant">
           <div className="max-w-container-max mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
