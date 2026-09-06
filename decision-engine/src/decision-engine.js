@@ -102,4 +102,67 @@ async function attachAttestations(results, bridge, nonceStore) {
   return results
 }
 
-export { runPureDecisionsOverHistory, attachAttestations }
+// --- Live pipeline additions ---
+// Everything below is new, additive, and never called by runPureDecisionsOverHistory() or
+// run_typescript.mjs (the Independent Reference Model Testing runner) -- those two stay exactly
+// as sealed. This is the single-row live path used by scripts/run-demo.mjs, reusing the same
+// shouldQuery()/makeBetDecision() primitives so the decision math itself is identical either way.
+
+/** Mirrors the row-shaping already inlined in runPureDecisionsOverHistory() above, kept as its
+ * own function here (not extracted out of that sealed loop) so the live path can normalize a
+ * single raw row without touching the verified function. */
+function normalizeRow(raw) {
+  return {
+    symbol: raw.symbol,
+    currentPrice: Number(raw.currentPrice),
+    movingAverage: Number(raw.movingAverage),
+    volatility: Number(raw.volatility),
+    percentileRank: Number(raw.percentileRank),
+    actualWindowSize: raw.actualWindowSize,
+    isFullWindow: raw.isFullWindow,
+    roundId: raw.roundId,
+    blockNumber: raw.blockNumber,
+    blockTimestamp: raw.blockTimestamp,
+  }
+}
+
+/**
+ * Warm-up from historical fixture data; real-time data starts from the first live query onward.
+ * Seeds "the previous row" for one symbol from the LAST fixture row for that symbol, so the
+ * first live row has something to compare trend against instead of unconditionally getting
+ * classifyTrend()'s UNKNOWN. The warm-up row itself is never treated as a live observation, never
+ * scored, and never re-emitted as a decision -- it only ever plays the role of "previous".
+ *
+ * @param {Array<object>} fixtureRows raw PriceRangeIndex rows (any order, any symbols)
+ * @param {string} symbol
+ * @returns {object | null} normalized row, or null if the fixture has no rows for this symbol
+ */
+function warmupLastRow(fixtureRows, symbol) {
+  const forSymbol = fixtureRows.filter((r) => r.symbol === symbol)
+  if (forSymbol.length === 0) return null
+  const sorted = [...forSymbol].sort((a, b) => Number(BigInt(a.blockNumber) - BigInt(b.blockNumber)))
+  return normalizeRow(sorted[sorted.length - 1])
+}
+
+/**
+ * Runs Step 1+2 for exactly ONE live row against a previously-seen row for the same symbol
+ * (from warmupLastRow() on the first live call, or the previous live row's `current` thereafter).
+ * Step 1's volatility-anomaly stats are intentionally cold here (historicalAvgVolatility/
+ * msSinceLastQuery both null) -- shouldQuery() is informational only and never gates betDecision
+ * (see query-decision.js), so there is nothing to warm up for it.
+ *
+ * @param {{ liveRawRow: object, previousRow: object | null }} args
+ * @returns {{ current: object, queryDecision: object, betDecision: object }}
+ */
+function runLiveDecisionStep({ liveRawRow, previousRow }) {
+  const current = normalizeRow(liveRawRow)
+  const queryDecision = shouldQuery({
+    currentVolatility: current.volatility,
+    historicalAvgVolatility: null,
+    msSinceLastQuery: null,
+  })
+  const betDecision = makeBetDecision({ current, previous: previousRow })
+  return { current, queryDecision, betDecision }
+}
+
+export { runPureDecisionsOverHistory, attachAttestations, warmupLastRow, runLiveDecisionStep, normalizeRow }
