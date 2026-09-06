@@ -1,0 +1,360 @@
+[
+  {
+    "name": "TC01_normal_bet",
+    "category": "normal_bet",
+    "description": "A direct bet at exactly the minimum threshold, inside the open betting window, is accepted and recorded.",
+    "inputs": {
+      "market_id": 0,
+      "bettor": "0x0000000000000000000000000000000000B0B1",
+      "direction": "BULL",
+      "amount": 1000000000000000,
+      "now": 500
+    },
+    "outcome": {
+      "status": "success",
+      "result": {
+        "recorded_amount": 1000000000000000,
+        "recorded_direction": "BULL",
+        "bull_total": 1000000000000000,
+        "bear_total": 0
+      }
+    }
+  },
+  {
+    "name": "TC02_normal_claim",
+    "category": "normal_claim",
+    "description": "A winning bettor claims after settlement; payout is total pool minus 2% fee, split proportional to the winning side's total.",
+    "inputs": {
+      "market_id": 0,
+      "bull_bettors": [
+        "0x0000000000000000000000000000000000B0B2",
+        "0x0000000000000000000000000000000000B0B3"
+      ],
+      "bear_bettors": [
+        "0x0000000000000000000000000000000000BEA1"
+      ],
+      "each_bet_amount": 1000000000000000,
+      "lock_price": 100,
+      "settle_price": 110,
+      "claimant": "0x0000000000000000000000000000000000B0B2"
+    },
+    "outcome": {
+      "status": "success",
+      "result": {
+        "payout": 1470000000000000,
+        "manually_recomputed_payout": 1470000000000000
+      }
+    }
+  },
+  {
+    "name": "TC03_agent_bet_replay",
+    "category": "replay_protection",
+    "description": "Submitting the identical attestation a second time is rejected even though the first submission succeeded.",
+    "inputs": {
+      "market_id": 0,
+      "agent": "0x0000000000000000000000000000000000A6E1",
+      "amount": 1000000000000000,
+      "nonce": 1,
+      "expiry": 2000,
+      "note": "same attestation submitted twice"
+    },
+    "outcome": {
+      "status": "reverted",
+      "reason": "attestation already used"
+    }
+  },
+  {
+    "name": "TC04_attestation_expired",
+    "category": "expiry",
+    "description": "An attestation submitted at or after its expiry timestamp is rejected.",
+    "inputs": {
+      "market_id": 0,
+      "agent": "0x0000000000000000000000000000000000A6E2",
+      "expiry": 100,
+      "now": 200
+    },
+    "outcome": {
+      "status": "reverted",
+      "reason": "attestation expired"
+    }
+  },
+  {
+    "name": "TC05_signer_mismatch",
+    "category": "signer_mismatch",
+    "description": "An attestation signed by a key other than the authorized signer is rejected, regardless of otherwise-valid contents.",
+    "inputs": {
+      "market_id": 0,
+      "agent": "0x0000000000000000000000000000000000A6E3",
+      "signed_by": "unauthorized_key",
+      "authorized_signer": "0x8f521433B517dbBDE4d0F1f373e1Fd07883201E5"
+    },
+    "outcome": {
+      "status": "reverted",
+      "reason": "attestation not signed by authorized signer"
+    }
+  },
+  {
+    "name": "TC06_amount_below_minimum",
+    "category": "amount_bounds",
+    "description": "A direct bet one wei below the minimum threshold is rejected.",
+    "inputs": {
+      "market_id": 0,
+      "bettor": "0x0000000000000000000000000000000000B0B4",
+      "amount": 999999999999999,
+      "min_bet": 1000000000000000
+    },
+    "outcome": {
+      "status": "reverted",
+      "reason": "bet below minimum threshold"
+    }
+  },
+  {
+    "name": "TC07_amount_above_agent_cap",
+    "category": "amount_bounds",
+    "description": "An agent bet one wei above the agent-specific cap is rejected.",
+    "inputs": {
+      "market_id": 0,
+      "agent": "0x0000000000000000000000000000000000A6E4",
+      "amount": 1000000000000001,
+      "agent_bet_cap_wei": 1000000000000000
+    },
+    "outcome": {
+      "status": "reverted",
+      "reason": "amount exceeds agent bet cap"
+    }
+  },
+  {
+    "name": "TC08_duplicate_bet",
+    "category": "duplicate_bet",
+    "description": "The same address betting twice on the same market is rejected on the second attempt, regardless of direction.",
+    "inputs": {
+      "market_id": 0,
+      "bettor": "0x0000000000000000000000000000000000B0B5",
+      "first_direction": "BULL",
+      "second_direction": "BEAR"
+    },
+    "outcome": {
+      "status": "reverted",
+      "reason": "address already bet on this market"
+    }
+  },
+  {
+    "name": "TC09_tie_settlement",
+    "category": "tie_settlement",
+    "description": "When the settlement price exactly equals the lock price, BULL is declared the winner.",
+    "inputs": {
+      "market_id": 0,
+      "lock_price": 100,
+      "settle_price": 100
+    },
+    "outcome": {
+      "status": "success",
+      "result": {
+        "winning_direction": "BULL"
+      }
+    }
+  },
+  {
+    "name": "TC10_fee_accumulation",
+    "category": "fee_accumulation",
+    "description": "Each successful claim adds that bet's proportional share of the 2% fee to the global accumulated-fees counter.",
+    "inputs": {
+      "market_id": 0,
+      "claimants": [
+        "0x0000000000000000000000000000000000B0B6",
+        "0x0000000000000000000000000000000000B0B7"
+      ],
+      "each_bet_amount": 1000000000000000
+    },
+    "outcome": {
+      "status": "success",
+      "result": {
+        "accumulated_fees_after_first_claim": 30000000000000,
+        "accumulated_fees_after_second_claim": 60000000000000
+      }
+    }
+  },
+  {
+    "name": "TC11_withdraw_success",
+    "category": "withdraw_success",
+    "description": "Admin withdraws a non-zero accumulated-fees balance; the counter resets to zero.",
+    "inputs": {
+      "market_id": 0,
+      "accumulated_fees_before_withdraw": 20000000000000,
+      "caller": "0x0000000000000000000000000000000000AD41"
+    },
+    "outcome": {
+      "status": "success",
+      "result": {
+        "withdrawn_amount": 20000000000000,
+        "accumulated_fees_after": 0
+      }
+    }
+  },
+  {
+    "name": "TC12_withdraw_zero_fails",
+    "category": "withdraw_failure",
+    "description": "Admin attempting to withdraw when the accumulated-fees counter is zero is rejected.",
+    "inputs": {
+      "accumulated_fees": 0,
+      "caller": "0x0000000000000000000000000000000000AD41"
+    },
+    "outcome": {
+      "status": "reverted",
+      "reason": "no fees to withdraw"
+    }
+  },
+  {
+    "name": "TC13_state_order_enforced",
+    "category": "state_machine",
+    "description": "OPEN -> LOCKED -> SETTLED cannot be skipped or repeated (bonus check, not in the required list).",
+    "inputs": {
+      "market_id": 0,
+      "attempted": "settle before lock, and lock twice"
+    },
+    "outcome": {
+      "status": "success",
+      "result": {
+        "settle_before_lock": "rejected: market must be LOCKED to settle",
+        "lock_twice": "rejected: market must be OPEN to lock"
+      }
+    }
+  },
+  {
+    "name": "TC14_multi_bettor_payout_consistency",
+    "category": "self_consistency",
+    "description": "With multiple winners of different bet sizes, sum(payouts) + accumulated_fees never exceeds the total pool (bonus check, not in the required list).",
+    "inputs": {
+      "market_id": 0,
+      "bull_amounts": [
+        1000000000000000,
+        2000000000000000,
+        3000000000000000
+      ],
+      "bear_amounts": [
+        2000000000000000,
+        3000000000000000
+      ],
+      "total_pool": 11000000000000000
+    },
+    "outcome": {
+      "status": "success",
+      "result": {
+        "total_paid_out": 10779999999999999,
+        "accumulated_fees": 219999999999999,
+        "rounding_dust_left_in_pool": 2
+      }
+    }
+  },
+  {
+    "name": "TC15_agent_bet_full_flow",
+    "category": "agent_claim",
+    "description": "An agent places a winning bet via place_agent_bet, the market settles, and the agent itself successfully claims; payout and fee-share match the same formula used for human claims.",
+    "inputs": {
+      "market_id": 0,
+      "agent": "0x0000000000000000000000000000000000A6E5",
+      "agent_amount": 1000000000000000,
+      "bear_bettor": "0x0000000000000000000000000000000000BEA3",
+      "bear_amount": 1000000000000000,
+      "lock_price": 100,
+      "settle_price": 110
+    },
+    "outcome": {
+      "status": "success",
+      "result": {
+        "payout": 1960000000000000,
+        "manually_recomputed_payout": 1960000000000000,
+        "accumulated_fees": 40000000000000,
+        "manually_recomputed_fee_share": 40000000000000
+      }
+    }
+  },
+  {
+    "name": "TC16_mixed_human_agent_same_direction",
+    "category": "shared_pool",
+    "description": "A human and an agent both bet BULL on the same market (a third bettor bets BEAR and loses); bull_total correctly aggregates both sources into one pool, and both claimants receive the same proportional payout.",
+    "inputs": {
+      "market_id": 0,
+      "human": "0x0000000000000000000000000000000000B0C1",
+      "human_direction": "BULL",
+      "agent": "0x0000000000000000000000000000000000A6E6",
+      "agent_direction": "BULL",
+      "bear_bettor": "0x0000000000000000000000000000000000BEA4",
+      "each_amount": 1000000000000000,
+      "lock_price": 100,
+      "settle_price": 110
+    },
+    "outcome": {
+      "status": "success",
+      "result": {
+        "bull_total_after_both_bets": 2000000000000000,
+        "human_payout": 1470000000000000,
+        "agent_payout": 1470000000000000,
+        "manually_recomputed_payout_each": 1470000000000000
+      }
+    }
+  },
+  {
+    "name": "TC17_mixed_human_agent_opposite_direction",
+    "category": "shared_pool",
+    "description": "A human bets BULL and an agent bets BEAR on the same market; when BULL wins, the human claims correctly from the shared pool and the agent's losing claim is rejected.",
+    "inputs": {
+      "market_id": 0,
+      "human": "0x0000000000000000000000000000000000B0C2",
+      "human_direction": "BULL",
+      "agent": "0x0000000000000000000000000000000000A6E7",
+      "agent_direction": "BEAR",
+      "each_amount": 1000000000000000,
+      "lock_price": 100,
+      "settle_price": 110
+    },
+    "outcome": {
+      "status": "success",
+      "result": {
+        "human_payout": 1960000000000000,
+        "manually_recomputed_payout": 1960000000000000,
+        "agent_claim_rejected_reason": "losing bet cannot claim"
+      }
+    }
+  },
+  {
+    "name": "TC18_agent_duplicate_bet_different_attestation",
+    "category": "duplicate_bet",
+    "description": "The same agent address betting twice on the same market via two DIFFERENT attestations is rejected by the duplicate-bet check, not the attestation-replay check.",
+    "inputs": {
+      "market_id": 0,
+      "agent": "0x0000000000000000000000000000000000A6E8",
+      "first_nonce": 100,
+      "second_nonce": 101,
+      "note": "two distinct attestations for the same agent+market, not a replay of the same one"
+    },
+    "outcome": {
+      "status": "success",
+      "result": {
+        "first_bet": "succeeded",
+        "second_bet_rejected_reason": "address already bet on this market"
+      }
+    }
+  },
+  {
+    "name": "TC19_tie_full_claim_flow",
+    "category": "tie_settlement",
+    "description": "A tie (settle_price == lock_price) settles as a BULL win end-to-end: the BULL bettor successfully claims and the BEAR bettor's claim is rejected.",
+    "inputs": {
+      "market_id": 0,
+      "bull_bettor": "0x0000000000000000000000000000000000B0C3",
+      "bear_bettor": "0x0000000000000000000000000000000000BEA5",
+      "each_amount": 1000000000000000,
+      "lock_price": 100,
+      "settle_price": 100
+    },
+    "outcome": {
+      "status": "success",
+      "result": {
+        "bull_payout": 1960000000000000,
+        "manually_recomputed_payout": 1960000000000000,
+        "bear_claim_rejected_reason": "losing bet cannot claim"
+      }
+    }
+  }
+]
