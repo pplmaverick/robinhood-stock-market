@@ -111,9 +111,9 @@ export default {
       },
       keyframes: {
         blink: { '0%, 49%': { opacity: 1 }, '50%, 100%': { opacity: 0 } },
-        scan: {
-          '0%':   { transform: 'translateX(-100%)' },
-          '100%': { transform: 'translateX(400%)' },
+        borderTrace: {
+          '0%':   { strokeDashoffset: '0' },
+          '100%': { strokeDashoffset: '-100' },
         },
       },
       animation: {

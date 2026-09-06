@@ -1,9 +1,9 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { formatEther } from 'viem'
 
 const API_URL = '/api/agent-status'
-const SCAN_MS = 520   // node scan sweep duration (spec: 400-600ms)
-const CONN_MS = 200   // connector light-up duration (spec: 150-250ms)
+const SCAN_MS = 900   // node border-current duration (spec: 600-900ms)
+const CONN_MS = 250   // connector light-up duration (spec: 150-250ms) -- plain dim/lit, no motion
 
 function fmtEth(weiStr) {
   if (weiStr == null) return '—'
@@ -44,6 +44,27 @@ function toneFromAgentBook(status) {
   if (status === 'backed') return 'bull'
   if (status === 'unbacked') return 'signal'
   return 'warn' // unknown
+}
+
+// Measures a node box's rendered pixel size so the border-trace SVG can draw its rect at the
+// box's exact dimensions -- keeps the traced rectangle undistorted and the light moving at a
+// constant visual speed around the perimeter, regardless of the box's actual aspect ratio.
+function useElementSize() {
+  const ref = useRef(null)
+  const [size, setSize] = useState({ width: 0, height: 0 })
+  useEffect(() => {
+    const el = ref.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(entries => {
+      const entry = entries[0]
+      if (!entry) return
+      const { width, height } = entry.contentRect
+      setSize({ width, height })
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  return [ref, size]
 }
 
 function useReducedMotion() {
@@ -98,9 +119,11 @@ export default function AgentDecisionPanel() {
   const betDecision = data?.decision?.status === 'ok' ? data.decision.betDecision : null
   const isActionable = !!betDecision && betDecision.decision !== 'NO_TRADE'
 
-  // Drives the node-by-node scan -> settle -> connector-light sequence. Keyed on `cycle` (not
-  // data content) so Refresh always replays the full sequence even if the API returns an
-  // identical decision. Data fetching itself lives entirely in `load()` above, untouched.
+  // Drives the node-by-node border-current -> settle -> connector-lit -> next-node sequence.
+  // Keyed on `cycle` (not data content) so Refresh always replays the full sequence even if the
+  // API returns an identical decision. Data fetching itself lives entirely in `load()` above,
+  // untouched. The connector is a plain dim/lit flash (no motion) -- the "current" treatment is
+  // reserved for each node's own border, so node and connector don't compete visually.
   useEffect(() => {
     setNodes({ n1: 'idle', n2: 'idle', n3: 'idle' })
     setConns({ c1: 'dim', c2: 'dim' })
@@ -126,7 +149,7 @@ export default function AgentDecisionPanel() {
       setNodes(prev => ({ ...prev, n1: 'settled' }))
       if (!isActionable) return // pipeline ends here -- node 2/3 stay idle, connectors stay dim
 
-      setConns(prev => ({ ...prev, c1: 'active' }))
+      setConns(prev => ({ ...prev, c1: 'lit' }))
       await sleep(CONN_MS)
       if (cancelled) return
       setConns(prev => ({ ...prev, c1: 'dim' }))
@@ -135,7 +158,7 @@ export default function AgentDecisionPanel() {
       if (cancelled) return
       setNodes(prev => ({ ...prev, n2: 'settled' }))
 
-      setConns(prev => ({ ...prev, c2: 'active' }))
+      setConns(prev => ({ ...prev, c2: 'lit' }))
       await sleep(CONN_MS)
       if (cancelled) return
       setConns(prev => ({ ...prev, c2: 'dim' }))
@@ -165,11 +188,11 @@ export default function AgentDecisionPanel() {
           <Node index={1} title="decision_snapshot" state={nodes.n1} tone={node1Tone}>
             <Step1Content decision={data.decision} marketId={data.marketId} />
           </Node>
-          <Connector active={conns.c1 === 'active'} />
+          <Connector state={conns.c1} />
           <Node index={2} title="bet_sizing" state={nodes.n2} tone={node2Tone}>
             {betDecision && <Step2Content betDecision={betDecision} />}
           </Node>
-          <Connector active={conns.c2 === 'active'} />
+          <Connector state={conns.c2} />
           <Node index={3} title="agentbook_verification" state={nodes.n3} tone={node3Tone}>
             {data.agentBook && (
               <Step3Content
@@ -214,54 +237,117 @@ function PanelShell({ children, onRefresh, refreshing }) {
 // ── node/connector pipeline chrome ──────────────────────────────────────────
 
 const TONE = {
-  bull:    { text: 'text-bull',              dot: 'bg-bull' },
-  bear:    { text: 'text-bear',              dot: 'bg-bear' },
-  signal:  { text: 'text-signal-dim',        dot: 'bg-signal' },
-  warn:    { text: 'text-locked',            dot: 'bg-locked' },
-  neutral: { text: 'text-on-surface-variant', dot: 'bg-on-surface-variant' },
+  bull:    { text: 'text-bull',              dot: 'bg-bull',              box: 'border-bull/40 bg-bull/[0.06]',
+             glow: 'shadow-[0_0_22px_-4px_rgba(52,211,153,0.55)]',  dotGlow: 'shadow-[0_0_8px_1px_rgba(52,211,153,0.85)]' },
+  bear:    { text: 'text-bear',              dot: 'bg-bear',              box: 'border-bear/40 bg-bear/[0.06]',
+             glow: 'shadow-[0_0_22px_-4px_rgba(251,113,133,0.55)]', dotGlow: 'shadow-[0_0_8px_1px_rgba(251,113,133,0.85)]' },
+  signal:  { text: 'text-signal-dim',        dot: 'bg-signal',            box: 'border-signal/40 bg-signal/[0.06]',
+             glow: 'shadow-[0_0_22px_-4px_rgba(56,189,248,0.55)]',  dotGlow: 'shadow-[0_0_8px_1px_rgba(56,189,248,0.85)]' },
+  warn:    { text: 'text-locked',            dot: 'bg-locked',            box: 'border-locked/40 bg-locked/[0.06]',
+             glow: 'shadow-[0_0_22px_-4px_rgba(251,191,36,0.55)]',  dotGlow: 'shadow-[0_0_8px_1px_rgba(251,191,36,0.85)]' },
+  neutral: { text: 'text-on-surface-variant', dot: 'bg-on-surface-variant', box: 'border-outline-variant bg-surface-variant/10',
+             glow: '', dotGlow: '' },
 }
 
 function Node({ index, title, state, tone, children }) {
+  const [boxRef, size] = useElementSize()
   const t = TONE[tone] ?? TONE.neutral
+  // idle and scanning share the same dim base look -- only the traced border overlay signals
+  // "processing"; the box itself only flips to its lit appearance once settled.
   const dotCls =
-    state === 'idle'     ? 'bg-on-surface-faint' :
+    state === 'settled' ? `${t.dot} ${t.dotGlow}` :
     state === 'scanning' ? 'bg-signal animate-pulse motion-reduce:animate-none' :
-    t.dot
+    'bg-on-surface-faint'
   const titleCls =
-    state === 'idle'     ? 'text-on-surface-faint' :
+    state === 'settled' ? t.text :
     state === 'scanning' ? 'text-signal' :
-    t.text
+    'text-on-surface-faint'
+  // idle boxes carry an "unlit trace" navy-blue tint (matches the circuit-board reference) rather
+  // than plain neutral gray, so the whole rail reads as one dark-PCB surface before anything fires.
+  const boxCls = state === 'settled' ? `${t.box} ${t.glow}` : 'border-signal-deep/50 bg-signal-deep/10'
+  const canTraceBorder = state === 'scanning' && size.width > 4 && size.height > 4
 
   return (
-    <div className="flex gap-4">
-      <div className="flex flex-col items-center pt-1.5 w-2">
-        <span className={`w-2 h-2 rounded-full transition-colors duration-300 ${dotCls}`} />
+    <div className="flex gap-3">
+      <div className="flex flex-col items-center pt-4 w-2.5 shrink-0">
+        <span className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${dotCls}`} />
       </div>
-      <div className="flex-1 min-w-0 pb-3">
-        <div className="relative overflow-hidden rounded">
-          {state === 'scanning' && (
-            <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-              <div className="absolute inset-y-0 w-1/3 -translate-x-full bg-gradient-to-r from-transparent via-signal/30 to-transparent animate-[scan_520ms_ease-in-out]" />
-            </div>
-          )}
-          <div className="relative flex items-center gap-2 py-0.5">
+      <div ref={boxRef} className={`relative flex-1 min-w-0 rounded-lg border transition-all duration-300 ${boxCls}`}>
+        {canTraceBorder && (
+          <svg
+            className="absolute -inset-px overflow-visible pointer-events-none"
+            width={size.width + 2}
+            height={size.height + 2}
+            viewBox={`0 0 ${size.width + 2} ${size.height + 2}`}
+            aria-hidden="true"
+          >
+            <defs>
+              {/* Mild fractal-noise displacement so the traced segment reads as a jittery,
+                  irregular "current" rather than a clean geometric line -- applied only to the
+                  sharp strokes below, not the blurred ambient glow (blur already handles softness
+                  there, and stacking both would just muddy the shape). */}
+              <filter id={`current-jitter-${index}`} x="-30%" y="-30%" width="160%" height="160%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed={index} result="n" />
+                <feDisplacementMap in="SourceGraphic" in2="n" scale="2.6" xChannelSelector="R" yChannelSelector="G" />
+              </filter>
+            </defs>
+            {/* pathLength=100 normalizes the rect's perimeter to 100 units regardless of its actual
+                aspect ratio, so "dasharray 8 92" is always an 8%-of-perimeter segment and dashoffset
+                0 -> -100 always completes exactly one full lap, corners included. This is the node's
+                own one-shot "current" ceremony -- a dedicated cyan-teal (#22d3d9 family), never the
+                Signal-blue used for generic interactive chrome elsewhere on this page. */}
+            <rect
+              x="1" y="1" width={size.width} height={size.height} rx="4" ry="4"
+              fill="none" stroke="#22d3d9" strokeWidth="7" strokeLinecap="round"
+              pathLength="100" strokeDasharray="8 92" opacity="0.28"
+              className="blur-[4px] animate-[borderTrace_900ms_linear]"
+            />
+            <rect
+              x="1" y="1" width={size.width} height={size.height} rx="4" ry="4"
+              fill="none" stroke="#0f766e" strokeWidth="2.5" strokeLinecap="round"
+              pathLength="100" strokeDasharray="8 92" opacity="0.30"
+              filter={`url(#current-jitter-${index})`}
+              className="animate-[borderTrace_900ms_linear_70ms]"
+            />
+            <rect
+              x="1" y="1" width={size.width} height={size.height} rx="4" ry="4"
+              fill="none" stroke="#22d3d9" strokeWidth="2.5" strokeLinecap="round"
+              pathLength="100" strokeDasharray="8 92" opacity="0.55"
+              filter={`url(#current-jitter-${index})`}
+              className="animate-[borderTrace_900ms_linear_35ms]"
+            />
+            <rect
+              x="1" y="1" width={size.width} height={size.height} rx="4" ry="4"
+              fill="none" stroke="#d4fffb" strokeWidth="2.5" strokeLinecap="round"
+              pathLength="100" strokeDasharray="8 92"
+              filter={`url(#current-jitter-${index})`}
+              className="animate-[borderTrace_900ms_linear]"
+            />
+          </svg>
+        )}
+        <div className="relative px-4 py-3">
+          <div className="flex items-center gap-2">
             <span className={`font-data-sm transition-colors duration-300 ${titleCls}`}>{`[0${index}]`}</span>
             <h4 className={`font-data-sm uppercase tracking-widest transition-colors duration-300 ${titleCls}`}>{title}</h4>
           </div>
+          {state === 'settled' && <div className="mt-3">{children}</div>}
         </div>
-        {state === 'settled' && <div className="mt-3">{children}</div>}
       </div>
     </div>
   )
 }
 
-function Connector({ active }) {
+// Plain dim/lit trace -- deliberately no motion, no gradient, no glow-dot. The "current" texture
+// is reserved for each node's own border so the node reads as the event and the connector reads
+// as a guide between events, not a second thing competing for attention.
+function Connector({ state }) {
+  const lit = state === 'lit'
   return (
-    <div className="flex gap-4">
-      <div className="flex flex-col items-center w-2">
+    <div className="flex gap-3">
+      <div className="flex flex-col items-center w-2.5 h-7 shrink-0">
         <span
-          className={`w-px h-5 transition-colors duration-150 ${
-            active ? 'bg-signal shadow-[0_0_6px_rgba(56,189,248,0.85)]' : 'bg-outline-variant'
+          className={`w-0.5 h-full rounded-full transition-colors duration-200 ${
+            lit ? 'bg-signal' : 'bg-signal-deep/60'
           }`}
         />
       </div>
