@@ -32,6 +32,22 @@ const VOLATILITY_ANOMALY_RATIO = Number(process.env.VOLATILITY_ANOMALY_RATIO ?? 
 // anything specific to querying cost.
 const QUERY_THROTTLE_MS = Number(process.env.QUERY_THROTTLE_MS ?? 5 * 60 * 1000)
 
+// --- Live pipeline wiring (Step 1 data source + Step 3/4 chain access) ---
+// Self-hosted graph-node on the Hetzner VPS (see verification/decision/ session notes), fronted
+// by nginx Basic Auth on port 8000. URL has no secret in it, so it's safe to default; the
+// username/password do NOT get a default -- callers must set them via env (decision-engine/.env)
+// and a missing value should fail loudly, never silently fall back to something guessable.
+const GRAPH_NODE_URL =
+  process.env.GRAPH_NODE_URL ?? 'http://46.62.246.244:8000/subgraphs/name/robinhood-stock-market/price-feeds'
+const GRAPH_NODE_USER = process.env.GRAPH_NODE_USER
+const GRAPH_NODE_PASSWORD = process.env.GRAPH_NODE_PASSWORD
+
+// StockPredictionMarketV2 on Robinhood Chain mainnet (see deployment.json).
+const ROBINHOOD_RPC_URL = process.env.ROBINHOOD_RPC_URL ?? 'https://rpc.mainnet.chain.robinhood.com'
+const ROBINHOOD_CHAIN_ID = Number(process.env.ROBINHOOD_CHAIN_ID ?? 4663)
+const STOCK_PREDICTION_MARKET_V2_ADDRESS =
+  process.env.STOCK_PREDICTION_MARKET_V2_ADDRESS ?? '0x59DF30E22bdaC70764a5DbF8bBa51BC5a595759C'
+
 export {
   MAX_BET_SIZE_WEI,
   MIN_BET_SIZE_WEI,
@@ -39,4 +55,10 @@ export {
   PERCENTILE_LOW_THRESHOLD,
   VOLATILITY_ANOMALY_RATIO,
   QUERY_THROTTLE_MS,
+  GRAPH_NODE_URL,
+  GRAPH_NODE_USER,
+  GRAPH_NODE_PASSWORD,
+  ROBINHOOD_RPC_URL,
+  ROBINHOOD_CHAIN_ID,
+  STOCK_PREDICTION_MARKET_V2_ADDRESS,
 }

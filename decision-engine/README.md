@@ -30,18 +30,26 @@ Full factor/threshold definitions and the momentum-vs-mean-reversion disclosure 
 
 ```bash
 npm install
-npm test        # deterministic unit tests, Steps 1+2 only
-npm run demo    # full pipeline over the real 89-row PriceRangeIndex history, including live
-                 # relayer attestation calls; prints one real BULL / BEAR / NO_TRADE example
+npm test        # deterministic unit tests, Steps 1+2 only, plus the live-pipeline modules below
+npm run demo    # live pipeline against the one real market that exists (StockPredictionMarketV2
+                 # marketId 0, TSLA): dynamic market lookup, live subgraph query, Step 1+2, and
+                 # (if non-NO_TRADE) a real relayer attestation call. Never broadcasts a bet.
+npm run demo -- --manual-decision=BULL --manual-amount=0.002   # bypass Step 1+2, use this
+                 # direction/amount instead -- for exercising attestation/nonce/calldata while
+                 # live data is frozen (e.g. over the weekend) and would otherwise be NO_TRADE.
 ```
 
-`npm run demo` loads `.env` (via `node --env-file`), so `AGENT_PRIVATE_KEY` there is used as this
-engine's fixed identity across runs. **Without a `.env`, `run-demo.mjs` generates a new random
-key every single invocation** — fine for exercising the pipeline, but useless for registering a
-real AgentBook identity, since a registration is permanently bound to one specific address and
-there would be no way to recover that address's key on a later run. Once you intend to register
-a real identity for this engine, generate a key once, save it to `.env`, and never regenerate it
-— see `.env.example`.
+`run-demo.mjs` requires both `AGENT_PRIVATE_KEY` and `RELAYER_PRIVATE_KEY` in `.env` (the latter
+must be the SAME key `relayer/.env` uses, since this engine calls `relayer/src/relayer.js`
+in-process rather than over a network — a mismatched key produces a signature that would never
+recover to the deployed contract's `relayerAddress`). It also requires `GRAPH_NODE_URL` /
+`GRAPH_NODE_USER` / `GRAPH_NODE_PASSWORD` for the live subgraph query (see `decision-engine/src/
+graph-client.js`; the URL has a safe default, the credentials do not). Missing any of these fails
+loudly at startup rather than silently falling back to a fixture or a throwaway key.
+
+The historical/reference-model comparison over the full 89-row fixture no longer lives here — see
+`verification/decision/run_typescript.mjs`, which reads the fixture directly and is unaffected by
+any of the above.
 
 ## Reference model
 
