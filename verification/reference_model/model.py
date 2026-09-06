@@ -163,7 +163,7 @@ class PredictionMarketModel:
         self._add_to_pool(m, direction, amount)
 
     def place_agent_bet(self, attestation: Attestation, signature: bytes, now: int) -> None:
-        if now >= attestation.expiry:
+        if now > attestation.expiry:
             raise ModelError("attestation expired")
         if attestation.amount > self.agent_bet_cap_wei:
             raise ModelError("amount exceeds agent bet cap")

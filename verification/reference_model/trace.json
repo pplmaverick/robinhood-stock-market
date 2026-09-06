@@ -86,7 +86,7 @@
       "market_id": 0,
       "agent": "0x0000000000000000000000000000000000A6E3",
       "signed_by": "unauthorized_key",
-      "authorized_signer": "0x8f521433B517dbBDE4d0F1f373e1Fd07883201E5"
+      "authorized_signer": "0x01509F22205aC566FCF3D96C2439942F245B2A59"
     },
     "outcome": {
       "status": "reverted",
@@ -354,6 +354,25 @@
         "bull_payout": 1960000000000000,
         "manually_recomputed_payout": 1960000000000000,
         "bear_claim_rejected_reason": "losing bet cannot claim"
+      }
+    }
+  },
+  {
+    "name": "TC20_attestation_expiry_exact_boundary",
+    "category": "expiry",
+    "description": "An attestation submitted at exactly its expiry timestamp (now == expiry) is still accepted, not rejected -- matches Solidity's require(block.timestamp <= expiresAt).",
+    "inputs": {
+      "market_id": 0,
+      "agent": "0x0000000000000000000000000000000000A6E9",
+      "expiry": 1000,
+      "now": 1000,
+      "note": "now == expiry exactly; must NOT be treated as expired"
+    },
+    "outcome": {
+      "status": "success",
+      "result": {
+        "recorded_amount": 1000000000000000,
+        "recorded_direction": "BULL"
       }
     }
   }

@@ -535,6 +535,31 @@ def tc19_tie_full_claim_flow():
     run_case("TC19_tie_full_claim_flow", "tie_settlement", "A tie (settle_price == lock_price) settles as a BULL win end-to-end: the BULL bettor successfully claims and the BEAR bettor's claim is rejected.", inputs, action)
 
 
+# ---------------------------------------------------------------------------
+# Phase 5 follow-up: exact-boundary check for the expiry fix (now == expiry
+# must still succeed, matching Solidity's require(block.timestamp <= expiresAt)).
+# ---------------------------------------------------------------------------
+
+
+def tc20_attestation_expiry_exact_boundary():
+    model = new_model()
+    # close_time is set well past the attestation's expiry so the market's own
+    # betting-window check can't interfere with isolating the expiry boundary.
+    market_id = new_market(model, open_time=0, close_time=5000)
+    agent = "0x0000000000000000000000000000000000A6E9"
+    expiry = 1000
+    attestation = Attestation(agent_address=agent, direction=Direction.BULL, amount=MIN_BET_WEI, market_id=market_id, nonce=200, expiry=expiry)
+    signature = sign_attestation(attestation, AUTHORIZED_SIGNER_KEY)
+    inputs = {"market_id": market_id, "agent": agent, "expiry": expiry, "now": expiry, "note": "now == expiry exactly; must NOT be treated as expired"}
+
+    def action():
+        model.place_agent_bet(attestation, signature, now=expiry)  # now == expiry, must succeed
+        bet = model.bets[(market_id, agent)]
+        return {"recorded_amount": bet.amount, "recorded_direction": bet.direction}
+
+    run_case("TC20_attestation_expiry_exact_boundary", "expiry", "An attestation submitted at exactly its expiry timestamp (now == expiry) is still accepted, not rejected -- matches Solidity's require(block.timestamp <= expiresAt).", inputs, action)
+
+
 def main():
     tc01_normal_bet()
     tc02_normal_claim()
@@ -555,6 +580,7 @@ def main():
     tc17_mixed_human_agent_opposite_direction()
     tc18_agent_duplicate_bet_different_attestation()
     tc19_tie_full_claim_flow()
+    tc20_attestation_expiry_exact_boundary()
 
     out_path = os.path.join(os.path.dirname(__file__), "trace.json")
     with open(out_path, "w") as f:
