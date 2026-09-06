@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { formatEther } from 'viem'
 
 const API_URL = '/api/agent-status'
-const STEP_DELAY_MS = 900
+const SCAN_MS = 520   // node scan sweep duration (spec: 400-600ms)
+const CONN_MS = 200   // connector light-up duration (spec: 150-250ms)
 
 function fmtEth(weiStr) {
   if (weiStr == null) return '—'
@@ -27,11 +28,52 @@ function describeNoTradeReason(inputB) {
   return `level (${level}) and trend (${trend}) disagree -- contradictory signal, defaulting to no action.`
 }
 
+// Node tone: which semantic color a settled node's indicator/header resolves to.
+// 'neutral'/'warn' never carry a directional (BULL/BEAR) claim -- see DESIGN.md §1.1.
+function toneFromDecision(decision) {
+  if (!decision) return 'neutral'
+  if (decision.status === 'query_failed') return 'warn'
+  if (decision.status === 'no_data') return 'neutral'
+  const d = decision.betDecision?.decision
+  if (d === 'BULL') return 'bull'
+  if (d === 'BEAR') return 'bear'
+  return 'neutral' // NO_TRADE
+}
+
+function toneFromAgentBook(status) {
+  if (status === 'backed') return 'bull'
+  if (status === 'unbacked') return 'signal'
+  return 'warn' // unknown
+}
+
+function useReducedMotion() {
+  const [reduced, setReduced] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      : false
+  )
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const handler = e => setReduced(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+  return reduced
+}
+
 export default function AgentDecisionPanel() {
   const [data, setData] = useState(null)
   const [fetchError, setFetchError] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [revealed, setRevealed] = useState(1)
+  const [cycle, setCycle] = useState(0) // bumped on every successful fetch, drives a full replay
+
+  // node/connector animation state -- purely presentational sequencing, layered on top of
+  // `data`; never used to derive or branch on the actual decision.
+  const [nodes, setNodes] = useState({ n1: 'idle', n2: 'idle', n3: 'idle' })
+  const [conns, setConns] = useState({ c1: 'dim', c2: 'dim' })
+
+  const reducedMotion = useReducedMotion()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -40,6 +82,7 @@ export default function AgentDecisionPanel() {
       if (!res.ok) throw new Error(`agent-status API returned HTTP ${res.status}`)
       const json = await res.json()
       setData(json)
+      setCycle(c => c + 1)
       setFetchError(null)
     } catch (e) {
       setFetchError(e.message)
@@ -55,44 +98,89 @@ export default function AgentDecisionPanel() {
   const betDecision = data?.decision?.status === 'ok' ? data.decision.betDecision : null
   const isActionable = !!betDecision && betDecision.decision !== 'NO_TRADE'
 
+  // Drives the node-by-node scan -> settle -> connector-light sequence. Keyed on `cycle` (not
+  // data content) so Refresh always replays the full sequence even if the API returns an
+  // identical decision. Data fetching itself lives entirely in `load()` above, untouched.
   useEffect(() => {
-    setRevealed(1)
-    if (!isActionable) return
-    const t1 = setTimeout(() => setRevealed(2), STEP_DELAY_MS)
-    const t2 = setTimeout(() => setRevealed(3), STEP_DELAY_MS * 2)
-    return () => {
-      clearTimeout(t1)
-      clearTimeout(t2)
+    setNodes({ n1: 'idle', n2: 'idle', n3: 'idle' })
+    setConns({ c1: 'dim', c2: 'dim' })
+    if (!data) return undefined
+
+    let cancelled = false
+    let timeoutId = null
+    const sleep = ms => new Promise(resolve => { timeoutId = setTimeout(resolve, ms) })
+
+    async function run() {
+      if (reducedMotion) {
+        setNodes({
+          n1: 'settled',
+          n2: isActionable ? 'settled' : 'idle',
+          n3: isActionable ? 'settled' : 'idle',
+        })
+        return
+      }
+
+      setNodes(prev => ({ ...prev, n1: 'scanning' }))
+      await sleep(SCAN_MS)
+      if (cancelled) return
+      setNodes(prev => ({ ...prev, n1: 'settled' }))
+      if (!isActionable) return // pipeline ends here -- node 2/3 stay idle, connectors stay dim
+
+      setConns(prev => ({ ...prev, c1: 'active' }))
+      await sleep(CONN_MS)
+      if (cancelled) return
+      setConns(prev => ({ ...prev, c1: 'dim' }))
+      setNodes(prev => ({ ...prev, n2: 'scanning' }))
+      await sleep(SCAN_MS)
+      if (cancelled) return
+      setNodes(prev => ({ ...prev, n2: 'settled' }))
+
+      setConns(prev => ({ ...prev, c2: 'active' }))
+      await sleep(CONN_MS)
+      if (cancelled) return
+      setConns(prev => ({ ...prev, c2: 'dim' }))
+      setNodes(prev => ({ ...prev, n3: 'scanning' }))
+      await sleep(SCAN_MS)
+      if (cancelled) return
+      setNodes(prev => ({ ...prev, n3: 'settled' }))
     }
-  }, [data?.timestamp, isActionable])
+    run()
+
+    return () => {
+      cancelled = true
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }, [cycle, reducedMotion])
+
+  const node1Tone = data ? toneFromDecision(data.decision) : 'neutral'
+  const node2Tone = betDecision?.decision === 'BEAR' ? 'bear' : 'bull'
+  const node3Tone = data?.agentBook ? toneFromAgentBook(data.agentBook.status) : 'neutral'
 
   return (
     <PanelShell onRefresh={load} refreshing={loading}>
       {fetchError && <ErrorNote message={fetchError} />}
       {!fetchError && !data && <LoadingNote />}
       {!fetchError && data && (
-        <>
-          <StepBlock visible>
-            <Step1 decision={data.decision} marketId={data.marketId} />
-          </StepBlock>
-
-          {isActionable && (
-            <StepBlock visible={revealed >= 2}>
-              <Step2 betDecision={betDecision} />
-            </StepBlock>
-          )}
-
-          {isActionable && revealed >= 2 && (
-            <StepBlock visible={revealed >= 3}>
-              <Step3
+        <div>
+          <Node index={1} title="decision_snapshot" state={nodes.n1} tone={node1Tone}>
+            <Step1Content decision={data.decision} marketId={data.marketId} />
+          </Node>
+          <Connector active={conns.c1 === 'active'} />
+          <Node index={2} title="bet_sizing" state={nodes.n2} tone={node2Tone}>
+            {betDecision && <Step2Content betDecision={betDecision} />}
+          </Node>
+          <Connector active={conns.c2 === 'active'} />
+          <Node index={3} title="agentbook_verification" state={nodes.n3} tone={node3Tone}>
+            {data.agentBook && (
+              <Step3Content
                 agentBook={data.agentBook}
                 agentAddress={data.agentAddress}
                 betDecision={betDecision}
                 marketId={data.marketId}
               />
-            </StepBlock>
-          )}
-        </>
+            )}
+          </Node>
+        </div>
       )}
     </PanelShell>
   )
@@ -105,7 +193,7 @@ function PanelShell({ children, onRefresh, refreshing }) {
         <h3 className="font-data-md text-headline-md text-on-surface">agent://decision-transparency</h3>
         <div className="flex items-center gap-3">
           <span className="font-data-sm text-on-surface-variant uppercase tracking-widest text-xs inline-flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-signal animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-signal animate-pulse motion-reduce:animate-none" />
             live · TSLA
             <span className="inline-block w-2 h-3.5 bg-signal-bright ml-0.5 animate-blink motion-reduce:animate-none" />
           </span>
@@ -123,14 +211,61 @@ function PanelShell({ children, onRefresh, refreshing }) {
   )
 }
 
-function StepBlock({ visible, children }) {
+// ── node/connector pipeline chrome ──────────────────────────────────────────
+
+const TONE = {
+  bull:    { text: 'text-bull',              dot: 'bg-bull' },
+  bear:    { text: 'text-bear',              dot: 'bg-bear' },
+  signal:  { text: 'text-signal-dim',        dot: 'bg-signal' },
+  warn:    { text: 'text-locked',            dot: 'bg-locked' },
+  neutral: { text: 'text-on-surface-variant', dot: 'bg-on-surface-variant' },
+}
+
+function Node({ index, title, state, tone, children }) {
+  const t = TONE[tone] ?? TONE.neutral
+  const dotCls =
+    state === 'idle'     ? 'bg-on-surface-faint' :
+    state === 'scanning' ? 'bg-signal animate-pulse motion-reduce:animate-none' :
+    t.dot
+  const titleCls =
+    state === 'idle'     ? 'text-on-surface-faint' :
+    state === 'scanning' ? 'text-signal' :
+    t.text
+
   return (
-    <div
-      className={`transition-all duration-500 ${
-        visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 h-0 overflow-hidden pointer-events-none'
-      }`}
-    >
-      {children}
+    <div className="flex gap-4">
+      <div className="flex flex-col items-center pt-1.5 w-2">
+        <span className={`w-2 h-2 rounded-full transition-colors duration-300 ${dotCls}`} />
+      </div>
+      <div className="flex-1 min-w-0 pb-3">
+        <div className="relative overflow-hidden rounded">
+          {state === 'scanning' && (
+            <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+              <div className="absolute inset-y-0 w-1/3 -translate-x-full bg-gradient-to-r from-transparent via-signal/30 to-transparent animate-[scan_520ms_ease-in-out]" />
+            </div>
+          )}
+          <div className="relative flex items-center gap-2 py-0.5">
+            <span className={`font-data-sm transition-colors duration-300 ${titleCls}`}>{`[0${index}]`}</span>
+            <h4 className={`font-data-sm uppercase tracking-widest transition-colors duration-300 ${titleCls}`}>{title}</h4>
+          </div>
+        </div>
+        {state === 'settled' && <div className="mt-3">{children}</div>}
+      </div>
+    </div>
+  )
+}
+
+function Connector({ active }) {
+  return (
+    <div className="flex gap-4">
+      <div className="flex flex-col items-center w-2">
+        <span
+          className={`w-px h-5 transition-colors duration-150 ${
+            active ? 'bg-signal shadow-[0_0_6px_rgba(56,189,248,0.85)]' : 'bg-outline-variant'
+          }`}
+        />
+      </div>
+      <div className="flex-1" />
     </div>
   )
 }
@@ -138,7 +273,7 @@ function StepBlock({ visible, children }) {
 function LoadingNote() {
   return (
     <div className="flex items-center gap-3 py-6">
-      <div className="w-2 h-2 rounded-full bg-signal animate-pulse" />
+      <div className="w-2 h-2 rounded-full bg-signal animate-pulse motion-reduce:animate-none" />
       <span className="font-body-sm text-on-surface-variant">Querying live decision-engine state…</span>
     </div>
   )
@@ -152,10 +287,11 @@ function ErrorNote({ message }) {
   )
 }
 
-function Step1({ decision, marketId }) {
+// ── step content (node bodies -- Node itself renders the [0n] header) ───────
+
+function Step1Content({ decision, marketId }) {
   return (
-    <div>
-      <StepHeader n={1} title="decision_snapshot" />
+    <>
       {decision.status === 'query_failed' && (
         <Note tone="warn">
           Live subgraph query failed ({decision.reason}): {decision.error}
@@ -181,16 +317,15 @@ function Step1({ decision, marketId }) {
           )}
         </div>
       )}
-    </div>
+    </>
   )
 }
 
-function Step2({ betDecision }) {
+function Step2Content({ betDecision }) {
   const dirGlyph = betDecision.decision === 'BULL' ? '▲ ' : betDecision.decision === 'BEAR' ? '▼ ' : ''
   const dirColor = betDecision.decision === 'BULL' ? 'text-bull' : betDecision.decision === 'BEAR' ? 'text-bear' : 'text-on-surface'
   return (
-    <div className="pt-4 border-t border-outline-variant">
-      <StepHeader n={2} title="bet_sizing" />
+    <div>
       <div className="flex items-center gap-6">
         <div>
           <div className="font-label-caps text-on-surface-variant uppercase tracking-widest text-xs">direction</div>
@@ -206,10 +341,9 @@ function Step2({ betDecision }) {
   )
 }
 
-function Step3({ agentBook, agentAddress, betDecision, marketId }) {
+function Step3Content({ agentBook, agentAddress, betDecision, marketId }) {
   return (
-    <div className="pt-4 border-t border-outline-variant">
-      <StepHeader n={3} title="agentbook_verification" />
+    <>
       {agentBook.status === 'backed' && (
         <Note tone="success">
           AgentBook confirms this agent (humanId {agentBook.humanId}) is human-backed. Signing
@@ -233,16 +367,7 @@ function Step3({ agentBook, agentAddress, betDecision, marketId }) {
           was denied.
         </Note>
       )}
-    </div>
-  )
-}
-
-function StepHeader({ n, title }) {
-  return (
-    <div className="flex items-center gap-2 mb-3">
-      <span className="font-data-sm text-signal">{`[0${n}]`}</span>
-      <h4 className="font-data-sm uppercase tracking-widest text-on-surface-variant">{title}</h4>
-    </div>
+    </>
   )
 }
 

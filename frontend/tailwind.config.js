@@ -111,6 +111,10 @@ export default {
       },
       keyframes: {
         blink: { '0%, 49%': { opacity: 1 }, '50%, 100%': { opacity: 0 } },
+        scan: {
+          '0%':   { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(400%)' },
+        },
       },
       animation: {
         blink: 'blink 1.1s steps(1) infinite',
