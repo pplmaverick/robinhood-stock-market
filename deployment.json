@@ -11,5 +11,31 @@
     "gasUsed": 1672009,
     "effectiveGasPriceWei": "402086000",
     "deployerAddress": "0xed2B5717c9b936ecC76d75401026A99143e278F5"
+  },
+  "StockPredictionMarket": {
+    "contractAddress": "0x72DAb8B1B53b3CF028e9A0d1E21178981f264245",
+    "chainId": 4663,
+    "status": "deprecated",
+    "note": "Original contract per ADR-09/ADR-10. Superseded by StockPredictionMarketV2 (not yet deployed). Historical bets on markets #5 and #14 both claimed by the project architect; markets #27 (TSLA) and #28 (AMZN) confirmed open with zero bullPool/bearPool. No longer referenced by frontend or any new code."
+  },
+  "ChainlinkPriceFeedWrappers": {
+    "chainId": 4663,
+    "TSLA": "0x072A3A0C04Cf8CDcaf5B4A73a4Ed4fF5A841531f",
+    "AMZN": "0xcAC5B9d2817325E78090E3Ce4b9C299C819cF953",
+    "PLTR": "0xBdC53E50b1167cE1199bFaD54A034f7ab1741051",
+    "AMD": "0x15636CE4C0EdE55335f84E6386f8F49C897c077d",
+    "NVDA": "0x914c40a644493b47336de847b0404E729e06C68d"
+  },
+  "StockPredictionMarketV2": {
+    "contractAddress": "0x59DF30E22bdaC70764a5DbF8bBa51BC5a595759C",
+    "relayerAddress": "0x67BBA560662eca86421BfD6Bb680ce228542defE",
+    "maxAgentBetWei": "5000000000000000",
+    "deployTxHash": "0x0e7ce7152917c54956d033c0d139445f842a69aea9b48a81b23c2ba1c7434b1c",
+    "deployedAt": "2026-09-06T03:20:55Z",
+    "deployBlockNumber": 55651814,
+    "chainId": 4663,
+    "gasUsed": 2772757,
+    "effectiveGasPriceWei": "414722000",
+    "deployerAddress": "0xed2B5717c9b936ecC76d75401026A99143e278F5"
   }
 }
