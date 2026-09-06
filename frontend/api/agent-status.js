@@ -79,6 +79,7 @@ export default async function handler(req, res) {
       timestamp: Date.now(),
     })
   } catch (e) {
+    console.error(e)
     res.status(500).json({ error: e instanceof Error ? e.message : String(e) })
   }
 }

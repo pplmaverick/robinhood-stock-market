@@ -115,6 +115,10 @@ export default {
           '0%':   { strokeDashoffset: '0' },
           '100%': { strokeDashoffset: '-100' },
         },
+        fadeInSettle: {
+          '0%':   { opacity: '0', transform: 'translateY(4px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
       },
       animation: {
         blink: 'blink 1.1s steps(1) infinite',

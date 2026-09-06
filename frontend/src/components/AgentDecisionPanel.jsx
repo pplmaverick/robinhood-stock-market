@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { formatEther } from 'viem'
 
 const API_URL = '/api/agent-status'
-const SCAN_MS = 1400  // node border-current duration (spec: 1200-1500ms -- slow enough to see the noise texture and the top->right->bottom->left travel, not a flash)
+const SCAN_MS = 2200  // node border-current duration (spec: 2000-2500ms -- confirmed 1400ms was genuinely deployed and measured on production via DOM timing, still felt too fast/abrupt, especially for NO_TRADE's single-node run)
 const CONN_MS = 250   // connector light-up duration (spec: 150-250ms) -- plain dim/lit, no motion
 
 function fmtEth(weiStr) {
@@ -300,28 +300,28 @@ function Node({ index, title, state, tone, children }) {
               x="1" y="1" width={size.width} height={size.height} rx="4" ry="4"
               fill="none" stroke="#22d3d9" strokeWidth="7" strokeLinecap="round"
               pathLength="100" strokeDasharray="8 92" opacity="0.28"
-              className="blur-[4px] animate-[borderTrace_1400ms_linear]"
+              className="blur-[4px] animate-[borderTrace_2200ms_linear]"
             />
             <rect
               x="1" y="1" width={size.width} height={size.height} rx="4" ry="4"
               fill="none" stroke="#0f766e" strokeWidth="2.5" strokeLinecap="round"
               pathLength="100" strokeDasharray="8 92" opacity="0.30"
               filter={`url(#current-jitter-${index})`}
-              className="animate-[borderTrace_1400ms_linear_100ms]"
+              className="animate-[borderTrace_2200ms_linear_160ms]"
             />
             <rect
               x="1" y="1" width={size.width} height={size.height} rx="4" ry="4"
               fill="none" stroke="#22d3d9" strokeWidth="2.5" strokeLinecap="round"
               pathLength="100" strokeDasharray="8 92" opacity="0.55"
               filter={`url(#current-jitter-${index})`}
-              className="animate-[borderTrace_1400ms_linear_50ms]"
+              className="animate-[borderTrace_2200ms_linear_80ms]"
             />
             <rect
               x="1" y="1" width={size.width} height={size.height} rx="4" ry="4"
               fill="none" stroke="#d4fffb" strokeWidth="2.5" strokeLinecap="round"
               pathLength="100" strokeDasharray="8 92"
               filter={`url(#current-jitter-${index})`}
-              className="animate-[borderTrace_1400ms_linear]"
+              className="animate-[borderTrace_2200ms_linear]"
             />
           </svg>
         )}
@@ -330,7 +330,9 @@ function Node({ index, title, state, tone, children }) {
             <span className={`font-data-sm transition-colors duration-300 ${titleCls}`}>{`[0${index}]`}</span>
             <h4 className={`font-data-sm uppercase tracking-widest transition-colors duration-300 ${titleCls}`}>{title}</h4>
           </div>
-          {state === 'settled' && <div className="mt-3">{children}</div>}
+          {state === 'settled' && (
+            <div className="mt-3 animate-[fadeInSettle_350ms_ease-out] motion-reduce:animate-none">{children}</div>
+          )}
         </div>
       </div>
     </div>
